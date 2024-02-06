@@ -4,7 +4,7 @@ import { RainbowProvider } from "RainbowProvider";
 import { useMemo } from "react";
 import { useAccount, useConfig, useNetwork } from "wagmi";
 import { Widget } from "./lib/widget/Widget";
-
+import styled from "styled-components";
 export const useProvider = () => {
   const { data } = useConfig();
 
@@ -34,10 +34,10 @@ function Wrapped() {
     <Widget
       provider={provider}
       onConnect={openConnectModal}
-      chainId={connectedChainId}
+      connectedChainId={connectedChainId}
       partner="playground"
       address={address}
-      supportedChain={137}
+      partnerChainId={56}
       uiSettings={uiConfig}
     />
   );
@@ -46,8 +46,20 @@ function Wrapped() {
 export const App = () => {
   return (
     <RainbowProvider>
-      <ConnectButton />
-      <Wrapped />
+      <Container>
+        <ConnectButton />
+        <Wrapped />
+      </Container>
     </RainbowProvider>
   );
 };
+
+
+const Container = styled.div`
+  max-width: 500px;
+  margin: 0 auto;
+  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+`

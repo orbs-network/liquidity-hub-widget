@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSwapStore } from "./store";
 import BN from "bignumber.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,16 +36,21 @@ export const useToAmount = () => {
 };
 
 const useTokensQueryKey = () => {
-  const { address, chainId } = useWidgetContext();
+  const { address, connectedChainId } = useWidgetContext();
   const web3 = useWeb3();
-  return [QUERY_KEYS.GET_TOKENS, chainId, address, web3?.version];
+  return [QUERY_KEYS.GET_TOKENS, connectedChainId, address, web3?.version];
 };
 export const useGetTokensQuery = () => {
-  const { updateStore, fromToken, toToken } = useSwapStore();
-  const { address, chainId } = useWidgetContext();
+  const { updateStore } = useSwapStore((s) => ({
+    fromToken: s.fromToken,
+    updateStore: s.updateStore,
+  }));
+  const { address, connectedChainId } = useWidgetContext();
+
   const web3 = useWeb3();
   const queryKey = useTokensQueryKey();
-  const chainConfig = getChainConfig(chainId!);
+  const chainConfig = getChainConfig(connectedChainId!);
+  const chainRef = useRef<number | undefined>(undefined);
 
   return useQuery({
     queryFn: async () => {
@@ -72,24 +77,20 @@ export const useGetTokensQuery = () => {
       sorted = sorted.filter((t) => !eqIgnoreCase(t.address, zeroAddress));
       sorted.unshift(nativeToken);
 
-      if (!fromToken) {
+      if (chainRef.current !== connectedChainId) {
         updateStore({ fromToken: sorted[1] });
+        chainRef.current = connectedChainId;
       }
-
-      if (!toToken) {
-        updateStore({ toToken: sorted[2] });
-      }
-
       return sorted;
     },
     queryKey,
-    enabled: !!chainConfig && !!chainId,
+    enabled: !!chainConfig && !!connectedChainId,
     refetchInterval: 60_000,
   });
 };
 
 export const useUSDPriceQuery = (address?: string) => {
-  const chainId = useWidgetContext().chainId;
+  const chainId = useWidgetContext().connectedChainId;
 
   return useQuery({
     queryFn: async () => {
@@ -125,12 +126,6 @@ export const useTokenContract = (address?: string) => {
   }, [web3, address]);
 };
 
-const useIsValidChain = () => {
-  const { chainId, supportedChain } = useWidgetContext();
-
-  return chainId === supportedChain;
-};
-
 export const useSwitchNetwork = () => {
   return useMutation({
     mutationFn: async (chainId: number) => switchMetaMaskNetwork(chainId),
@@ -163,10 +158,10 @@ export const useSubmitButton = () => {
     confirmSwap(onSuccess);
   }, [confirmSwap, refetchBalances, updateStore, initSwap]);
 
-  const { onConnect, address, supportedChain } = useWidgetContext();
+  const { onConnect, address, partnerChainId } = useWidgetContext();
   const { mutate: switchNetwork, isLoading: switchNetworkLoading } =
     useSwitchNetwork();
-  const isValidChain = useIsValidChain();
+  const wrongChain = useIsWrongChain();
   const outAmount = quote?.outAmount;
   const fromTokenBalance = useTokenFromTokenList(fromToken)?.balance;
 
@@ -178,11 +173,11 @@ export const useSubmitButton = () => {
     };
   }
 
-  if (!isValidChain) {
+  if (wrongChain) {
     return {
       disabled: false,
-      text: `Switch to ${getChainConfig(supportedChain)?.chainName}`,
-      onClick: () => switchNetwork?.(supportedChain!),
+      text: `Switch to ${getChainConfig(partnerChainId)?.chainName}`,
+      onClick: () => switchNetwork?.(partnerChainId!),
       isLoading: switchNetworkLoading,
     };
   }
@@ -269,7 +264,7 @@ export const useLiquidityHubWithArgs = () => {
   const fromTokenUsd = useUSDPriceQuery(fromToken?.address).data;
   const toTokenUsd = useUSDPriceQuery(toToken?.address).data;
   const parsedTokens = useParseTokensForLh();
-  const {slippage} = useWidgetContext();
+  const { slippage } = useWidgetContext();
   return useLiquidityHub({
     fromToken: parsedTokens?.fromToken,
     toToken: parsedTokens?.toToken,
@@ -284,7 +279,7 @@ export const useLiquidityHubWithArgs = () => {
 export const useRefetchBalancesCallback = () => {
   const client = useQueryClient();
   const web3 = useWeb3();
-  const { chainId, address } = useWidgetContext();
+  const { address } = useWidgetContext();
   const { fromToken, toToken, updateStore } = useSwapStore((s) => ({
     fromToken: s.fromToken,
     toToken: s.toToken,
@@ -293,7 +288,7 @@ export const useRefetchBalancesCallback = () => {
   const queryKey = useTokensQueryKey();
 
   return useCallback(async () => {
-    if (!address || !fromToken || !toToken || !web3 || !chainId) return;
+    if (!address || !fromToken || !toToken || !web3) return;
     updateStore({
       fetchingBalancesAfterTx: true,
     });
@@ -324,11 +319,8 @@ export const useRefetchBalancesCallback = () => {
     updateStore,
     client,
     queryKey,
-    chainId,
   ]);
 };
-
-
 
 export function useDebounce(value: string, delay: number) {
   // State and setters for debounced value
@@ -358,7 +350,7 @@ export const useWeb3 = () => {
 };
 
 export const useGasPriceQuery = () => {
-  const chainId = useWidgetContext().chainId;
+  const chainId = useWidgetContext().connectedChainId;
   const web3 = useWeb3();
   return useQuery({
     queryKey: [QUERY_KEYS.GAS_PRICE, chainId],
@@ -414,10 +406,15 @@ export const useOnPercentClickCallback = () => {
 };
 
 export const useChainConfig = () => {
-  const { chainId } = useWidgetContext();
+  const { partnerChainId } = useWidgetContext();
   return useMemo(() => {
-    return getChainConfig(chainId);
-  }, [chainId]);
+    return getChainConfig(partnerChainId);
+  }, [partnerChainId]);
 };
 
-
+export const useIsWrongChain = () => {
+  const { connectedChainId, partnerChainId } = useWidgetContext();
+  return useMemo(() => {
+    return connectedChainId !== partnerChainId;
+  }, [connectedChainId, partnerChainId]);
+};

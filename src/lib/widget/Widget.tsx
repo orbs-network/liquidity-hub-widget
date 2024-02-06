@@ -45,19 +45,20 @@ const client = new QueryClient({
   },
 });
 
-
-
 const defaultPercentButtons = [
   { label: "25%", value: 0.25 },
   { label: "50%", value: 0.5 },
   { label: "75%", value: 0.75 },
   { label: "100%", value: 1 },
-]
+];
 
 const PercentButtons = () => {
   const onPercentageChange = useOnPercentClickCallback();
-  const styles = useWidgetContext().uiSettings?.styles?.tokenPanel?.percentButtons;
-  const percentButtons = useWidgetContext().uiSettings?.config?.percentButtons || defaultPercentButtons;
+  const styles =
+    useWidgetContext().uiSettings?.styles?.tokenPanel?.percentButtons;
+  const percentButtons =
+    useWidgetContext().uiSettings?.config?.percentButtons ||
+    defaultPercentButtons;
   return (
     <StyledPercentButtons className="clob-token-panel-percent" $style={styles}>
       {percentButtons?.map((it, index) => {
@@ -84,7 +85,8 @@ const TokenSelect = ({
   logoUrl?: string;
   onClick: () => void;
 }) => {
-  const styles = useWidgetContext().uiSettings?.styles?.tokenPanel?.tokenSelector;
+  const styles =
+    useWidgetContext().uiSettings?.styles?.tokenPanel?.tokenSelector;
 
   return (
     <StyledTokenSelect
@@ -132,8 +134,6 @@ const Container = ({
     </StyledContainer>
   );
 };
-
-
 
 const ChangeTokens = () => {
   const onSwitchTokens = useSwapStore((store) => store.onSwitchTokens);
@@ -232,7 +232,6 @@ const TokenPanel = ({
 
   const header = <TokenPanelHeader isSrc={isSrc} label={label} />;
 
-
   return (
     <>
       <StyledTokenPanel $inputLeft={inputLeft} $usdLeft={usdLeft}>
@@ -277,19 +276,26 @@ const TokenPanel = ({
 
 export const Widget = (args: WidgetArgs) => {
   const theme = useMemo(() => getTheme(args.uiSettings), [args.uiSettings]);
-  const { provider, address, partner, chainId } = args;
+  const { provider, address, partner, connectedChainId } = args;
 
   useEffect(() => {
     setWeb3Instance(new Web3(provider));
   }, [provider]);
 
+  if (!partner) {
+    return (
+      <div>
+        <Text>Partner is required</Text>
+      </div>
+    );
+  }
   return (
     <QueryClientProvider client={client}>
       <LiquidityHubProvider
         provider={provider}
         account={address}
-        partner={partner as any}
-        chainId={chainId}
+        partner={partner}
+        chainId={connectedChainId}
         apiUrl={args.apiUrl}
         quoteInterval={args.quoteInterval}
       >

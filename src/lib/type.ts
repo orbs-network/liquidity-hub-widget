@@ -62,9 +62,9 @@ export interface WidgetUISettings {
 export type WidgetArgs = {
   provider?: any;
   address?: string;
-  chainId?: number;
+  connectedChainId?: number;
   partner?: string;
-  supportedChain?: number;
+  partnerChainId?: number;
   onConnect?: () => void;
   uiSettings?: WidgetUISettings;
   apiUrl?: string;

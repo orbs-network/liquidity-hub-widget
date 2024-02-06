@@ -45,7 +45,6 @@ export const StyledContainer = styled.div<{ $style?: CSSObject }>`
   color: white;
   display: flex;
   flex-direction: column;
-  max-width: 500px;
   width: 100%;
   margin: 0 auto;
   background-color: #1b1e29;
