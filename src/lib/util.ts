@@ -32,6 +32,8 @@ export async function fetchPrice(
   tokenAddress: string,
   chainId: number
 ): Promise<number> {
+  console.log("fetchPrice", tokenAddress, chainId);
+  
   try {
     const { data } = await axios.get(
       `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}/`
@@ -45,6 +47,8 @@ export async function fetchPrice(
       );
       return paraPrice.price;
     }
+    console.log("fetchPrice", parseFloat(data.pairs[0].priceUsd));
+    
     return parseFloat(data.pairs[0].priceUsd);
   } catch (e) {
     throw new Error(`fetchPrice: ${tokenAddress} failed`);

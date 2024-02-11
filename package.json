@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@defi.org/web3-candies": "^4.20.12",
-    "@orbs-network/liquidity-hub-lib": "^0.0.87",
+    "@orbs-network/liquidity-hub-lib": "^0.0.208",
     "axios": "^1.6.3",
     "ethereum-multicall": "^2.21.0",
     "lodash": "^4.17.21",

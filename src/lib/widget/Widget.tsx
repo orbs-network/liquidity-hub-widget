@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  useFromAmount,
   useOnPercentClickCallback,
   useToAmount,
   useTokenAmountUSD,
@@ -152,8 +153,9 @@ const ChangeTokens = () => {
 };
 
 const FromTokenPanel = () => {
-  const { onFromAmountChange, onFromTokenChange, fromAmount, fromToken } =
-    useSwapStore();
+  const { onFromAmountChange, onFromTokenChange, fromToken } = useSwapStore();
+  const fromAmount = useFromAmount();  
+
   const usd = useTokenAmountUSD(fromToken, fromAmount);
   const balance = useTokenFromTokenList(fromToken)?.balance;
 
@@ -172,7 +174,7 @@ const FromTokenPanel = () => {
 };
 
 const ToTokenPanel = () => {
-  const { onToTokenChange, toToken } = useSwapStore();
+  const { onToTokenChange, toToken, onToAmountChange } = useSwapStore();
   const amount = useToAmount()?.uiAmount;
 
   const usd = useTokenAmountUSD(toToken, amount);
@@ -186,6 +188,7 @@ const ToTokenPanel = () => {
       usd={usd}
       onSelectToken={onToTokenChange}
       inputValue={inputValue || ""}
+      onInputChange={onToAmountChange}
       label="To"
       balance={balance}
     />
@@ -242,10 +245,10 @@ const TokenPanel = ({
             <>
               <StyledInput
                 onChange={onInputChange}
-                disabled={!isSrc}
                 value={inputValue}
                 placeholder="0.00"
                 $alignLeft={inputLeft}
+                disabled={!isSrc}
               />
               <TokenSelect
                 symbol={token?.symbol}

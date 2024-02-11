@@ -13,16 +13,6 @@ export const useProvider = () => {
   }, [data]);
 };
 
-const uiConfig: WidgetUISettings = {
-  config: {
-    percentButtons: [
-      { label: "25%", value: 0.25 },
-      { label: "50%", value: 0.5 },
-      { label: "75%", value: 0.75 },
-      { label: "100%", value: 1 },
-    ],
-  },
-};
 
 function Wrapped() {
   const { openConnectModal } = useConnectModal();
@@ -37,8 +27,7 @@ function Wrapped() {
       connectedChainId={connectedChainId}
       partner="playground"
       address={address}
-      partnerChainId={56}
-      uiSettings={uiConfig}
+      partnerChainId={137}
     />
   );
 }

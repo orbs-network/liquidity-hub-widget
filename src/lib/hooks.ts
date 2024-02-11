@@ -17,7 +17,7 @@ import {
   Token as LHToken,
 } from "@orbs-network/liquidity-hub-lib";
 import { DEFAULT_SLIPPAGE, QUERY_KEYS } from "./consts";
-import { amountUi, fetchPrice, tokensWithBalances } from "./util";
+import { amountBN, amountUi, fetchPrice, tokensWithBalances } from "./util";
 import Web3 from "web3";
 import _ from "lodash";
 import { useWidgetContext } from "lib/context";
@@ -25,14 +25,32 @@ import { getChainConfig } from "lib/chains";
 
 export const useToAmount = () => {
   const { quote } = useLiquidityHubWithArgs();
-  const { toToken } = useSwapStore();
+  const { toToken, toAmount, swapTypeIsBuy } = useSwapStore();
   return useMemo(() => {
     if (!toToken) return;
+    if (swapTypeIsBuy) {
+      return {
+        rawAmount: amountBN(toToken.decimals, toAmount).toString(),
+        uiAmount: toAmount,
+      };
+    }
     return {
       rawAmount: quote?.outAmount,
-      uiAmount: amountUi(toToken.decimals, new BN(quote?.outAmount || "")),
+      uiAmount: quote?.outAmountUI,
     };
-  }, [toToken, quote?.outAmount]);
+  }, [toToken, quote, swapTypeIsBuy, toAmount]);
+};
+
+export const useFromAmount = () => {
+  const { quote } = useLiquidityHubWithArgs();
+  const { fromToken, fromAmount, swapTypeIsBuy } = useSwapStore();
+  return useMemo(() => {
+    if (!fromToken) return;
+    if (swapTypeIsBuy) {
+      return quote?.outAmountUI;
+    }
+    return fromAmount;
+  }, [fromToken, quote, swapTypeIsBuy, fromAmount]);
 };
 
 const useTokensQueryKey = () => {
@@ -46,6 +64,7 @@ export const useGetTokensQuery = () => {
     updateStore: s.updateStore,
   }));
   const { address, connectedChainId } = useWidgetContext();
+  const wrongChain = useIsWrongChain();
 
   const web3 = useWeb3();
   const queryKey = useTokensQueryKey();
@@ -84,7 +103,7 @@ export const useGetTokensQuery = () => {
       return sorted;
     },
     queryKey,
-    enabled: !!chainConfig && !!connectedChainId,
+    enabled: !!chainConfig && !!connectedChainId && !wrongChain,
     refetchInterval: 60_000,
   });
 };
@@ -133,7 +152,7 @@ export const useSwitchNetwork = () => {
 };
 
 export const useSubmitButton = () => {
-  const { fromAmount, fromToken, toToken, updateStore } = useSwapStore();
+  const {fromToken, toToken, updateStore } = useSwapStore();
   const {
     confirmSwap,
     swapLoading,
@@ -142,7 +161,8 @@ export const useSubmitButton = () => {
     quoteError,
     analytics: { initSwap },
   } = useLiquidityHubWithArgs();
-
+  const fromAmount = useFromAmount();
+  const toAmount = useToAmount();
   const refetchBalances = useRefetchBalancesCallback();
 
   const swap = useCallback(async () => {
@@ -155,7 +175,7 @@ export const useSubmitButton = () => {
       });
     };
 
-    confirmSwap(onSuccess);
+    confirmSwap({onSuccess, fallback: () => console.log('lalalal')});
   }, [confirmSwap, refetchBalances, updateStore, initSwap]);
 
   const { onConnect, address, partnerChainId } = useWidgetContext();
@@ -189,7 +209,7 @@ export const useSubmitButton = () => {
     };
   }
 
-  if (!fromAmount || BN(fromAmount).isZero()) {
+  if (BN(fromAmount || 0).isZero() && BN(toAmount?.rawAmount || 0).isZero()) {
     return {
       disabled: true,
       text: "Enter an amount",
@@ -260,19 +280,27 @@ const useParseTokensForLh = () => {
 };
 
 export const useLiquidityHubWithArgs = () => {
-  const { fromAmount, fromToken, toToken } = useSwapStore();
+  const { fromAmount, toAmount, fromToken, toToken, swapTypeIsBuy } =
+    useSwapStore((s) => ({
+      fromAmount: s.fromAmount,
+      toAmount: s.toAmount,
+      fromToken: s.fromToken,
+      toToken: s.toToken,
+      swapTypeIsBuy: s.swapTypeIsBuy,
+    }));
   const fromTokenUsd = useUSDPriceQuery(fromToken?.address).data;
   const toTokenUsd = useUSDPriceQuery(toToken?.address).data;
   const parsedTokens = useParseTokensForLh();
   const { slippage } = useWidgetContext();
+
   return useLiquidityHub({
     fromToken: parsedTokens?.fromToken,
     toToken: parsedTokens?.toToken,
-    fromAmountUI: fromAmount,
-    dexAmountOut: "",
+    fromAmountUI: swapTypeIsBuy ? toAmount : fromAmount,
     toTokenUsd,
     fromTokenUsd,
     slippage: slippage || DEFAULT_SLIPPAGE,
+    swapTypeIsBuy,
   });
 };
 
@@ -311,15 +339,7 @@ export const useRefetchBalancesCallback = () => {
     updateStore({
       fetchingBalancesAfterTx: false,
     });
-  }, [
-    address,
-    fromToken,
-    toToken,
-    web3,
-    updateStore,
-    client,
-    queryKey,
-  ]);
+  }, [address, fromToken, toToken, web3, updateStore, client, queryKey]);
 };
 
 export function useDebounce(value: string, delay: number) {

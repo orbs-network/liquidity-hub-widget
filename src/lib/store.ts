@@ -14,9 +14,12 @@ interface Store {
   fromToken?: Token;
   toToken?: Token;
   fromAmount?: string;
+  toAmount?: string;
   fetchingBalancesAfterTx?: boolean;
+  swapTypeIsBuy?: boolean;
   updateStore: (value: Partial<Store>) => void;
   onFromAmountChange: (value: string) => void;
+  onToAmountChange: (value: string) => void;
   onFromTokenChange: (value: Token) => void;
   onToTokenChange: (value: Token) => void;
   onSwitchTokens: () => void;
@@ -27,13 +30,18 @@ const initialState: Partial<Store> = {
   fromToken: undefined,
   toToken: undefined,
   fromAmount: undefined,
+  toAmount: undefined,
   fetchingBalancesAfterTx: false,
+  swapTypeIsBuy: false,
 };
 
 export const useSwapStore = create<Store>((set) => ({
   ...initialState,
   updateStore: (value) => set({ ...value }),
-  onFromAmountChange: (value) => set({ fromAmount: value }),
+  onFromAmountChange: (value) =>
+    set({ fromAmount: value, swapTypeIsBuy: false }),
+  onToAmountChange: (value) =>
+    set({ toAmount: value, swapTypeIsBuy: true }),
   onFromTokenChange: (value) => set({ fromToken: value }),
   onToTokenChange: (value) => set({ toToken: value }),
   onSwitchTokens: () =>

@@ -3,6 +3,15 @@
 import { CSSObject } from "styled-components";
 
 
+export interface Network {
+  native: Token;
+  getTokens: () => Promise<Token[]>;
+  wToken?: Token;
+  chainId: number;
+  chainName: string;
+}
+
+
 export interface TokenPanelProps {
   usd?: string | number;
   balance?: string;

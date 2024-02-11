@@ -1,25 +1,13 @@
 import { erc20s, networks, zeroAddress } from "@defi.org/web3-candies";
 import axios from "axios";
 import _ from "lodash";
-import { Token } from "lib/type";
+import { Network, Token } from "lib/type";
 
-enum Chains {
-  POLYGON = 137,
-  BSC = 56,
-}
-
-export interface Network {
-  native: Token;
-  getTokens: () => Promise<Token[]>;
-  wToken?: Token;
-  chainId: Chains;
-  chainName: string;
-}
 
 class Polygon implements Network {
   native = networks.poly.native;
   wToken = networks.poly.wToken;
-  chainId = Chains.POLYGON;
+  chainId = 137;
   chainName = "Polygon";
   getTokens = async (): Promise<Token[]> => {
     const res = await (
@@ -55,7 +43,7 @@ class Polygon implements Network {
 class Bsc implements Network {
   native = networks.bsc.native;
   wToken = networks.bsc.wToken;
-  chainId = Chains.BSC;
+  chainId = 56;
   chainName = "BSC";
   getTokens = async (): Promise<Token[]> => {
     let tokens = await (
@@ -84,12 +72,43 @@ class Bsc implements Network {
   };
 }
 
-const ChainsConfig: { [key: number]: Network } = {
-  [Chains.POLYGON]: new Polygon(),
-  [Chains.BSC]: new Bsc(),
+class ZkEvm implements Network {
+  native = networks.eth.native;
+  wToken = {
+    ...networks.eth.wToken,
+    address: "0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9",
+  };
+  chainId = 1101;
+  chainName = "Polygon ZkEVM";
+  getTokens = async (): Promise<Token[]> => {
+    let tokens = await(
+      await axios.get(
+        "https://unpkg.com/quickswap-default-token-list@1.3.21/build/quickswap-default.tokenlist.json"
+      )
+    ).data.tokens;
+  
+    const res =  tokens.filter((it: any) => it.chainId === this.chainId).map((it: any) => {
+      return {
+        address: it.address,
+        symbol: it.symbol,
+        decimals: it.decimals,
+        logoUrl: it.logoURI,
+      };
+    });
+    return [this.native, ...res]
+  };
+}
+
+
+export const supportedChainsConfig = {
+  polygon: new Polygon(),
+  bsc: new Bsc(),
+  skevm: new ZkEvm(),
 };
 
 export const getChainConfig = (chainId?: number): Network | undefined => {
   if (!chainId) return undefined;
-  return ChainsConfig[chainId];
+  return Object.values(supportedChainsConfig).find(
+    (it) => it.chainId === chainId
+  );
 };
