@@ -175,7 +175,7 @@ export const useSubmitButton = () => {
       });
     };
 
-    confirmSwap({onSuccess, fallback: () => console.log('lalalal')});
+    confirmSwap({onSuccess});
   }, [confirmSwap, refetchBalances, updateStore, initSwap]);
 
   const { onConnect, address, partnerChainId } = useWidgetContext();
