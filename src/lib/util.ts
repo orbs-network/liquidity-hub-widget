@@ -31,9 +31,7 @@ export async function fetchPriceParaswap(
 export async function fetchPrice(
   tokenAddress: string,
   chainId: number
-): Promise<number> {
-  console.log("fetchPrice", tokenAddress, chainId);
-  
+): Promise<number> {  
   try {
     const { data } = await axios.get(
       `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}/`
@@ -46,9 +44,7 @@ export async function fetchPrice(
         data.decimals
       );
       return paraPrice.price;
-    }
-    console.log("fetchPrice", parseFloat(data.pairs[0].priceUsd));
-    
+    }    
     return parseFloat(data.pairs[0].priceUsd);
   } catch (e) {
     throw new Error(`fetchPrice: ${tokenAddress} failed`);
@@ -65,10 +61,15 @@ export const amountUi = (decimals?: number, amount?: BN) => {
 };
 
 export const tokensWithBalances = async (
-  web3: Web3,
-  account: string,
-  tokens: Token[]
+  tokens: Token[],
+  web3?: Web3,
+  account?: string,
+ 
 ): Promise<Token[]> => {
+
+  if (!web3 || !account) {
+    return tokens;
+  }
   const native = tokens.find((it) => isNativeAddress(it.address));
   const erc20Tokens = tokens.filter((it) => !isNativeAddress(it.address));
 
@@ -128,6 +129,8 @@ export const tokensWithBalances = async (
     };
   });
 };
+
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

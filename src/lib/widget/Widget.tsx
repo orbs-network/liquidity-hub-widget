@@ -1,23 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
-  useFromAmount,
+  useFromToken,
   useOnPercentClickCallback,
   useToAmount,
   useTokenAmountUSD,
-  useTokenFromTokenList,
+  useToToken,
 } from "lib/hooks";
 import { useSwapStore } from "lib/store";
-import { ThemeProvider } from "styled-components";
-import Web3 from "web3";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { TokenPanelProps, WidgetArgs } from "../type";
-import {
-  LiquidityHubProvider,
-  useFormatNumber,
-} from "@orbs-network/liquidity-hub-lib";
-import { getTheme } from "lib/theme";
-import { setWeb3Instance } from "@defi.org/web3-candies";
-import { useWidgetContext, WidgetContextProvider } from "lib/context";
+import { TokenPanelProps } from "../type";
+import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
+import { useWidgetContext } from "lib/context";
 import {
   StyledChangeTokens,
   StyledContainer,
@@ -37,14 +29,6 @@ import { USD } from "lib/components/USD";
 import { Logo } from "lib/components/Logo";
 import { FlexRow } from "lib/base-styles";
 import { SwapSubmitButton } from "lib/components/SwapSubmitButton";
-
-const client = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 const defaultPercentButtons = [
   { label: "25%", value: 0.25 },
@@ -108,7 +92,7 @@ const TokenSelect = ({
   );
 };
 
-export function Swap({ className = "" }: { className?: string }) {
+export function Widget({ className = "" }: { className?: string }) {
   return (
     <Container className={className}>
       <FromTokenPanel />
@@ -153,44 +137,39 @@ const ChangeTokens = () => {
 };
 
 const FromTokenPanel = () => {
-  const { onFromAmountChange, onFromTokenChange, fromToken } = useSwapStore();
-  const fromAmount = useFromAmount();  
+  const { onFromAmountChange, fromAmount } = useSwapStore();
+  const fromToken = useFromToken()
 
-  const usd = useTokenAmountUSD(fromToken, fromAmount);
-  const balance = useTokenFromTokenList(fromToken)?.balance;
+  const usd = useTokenAmountUSD(fromToken?.address, fromAmount);
 
   return (
     <TokenPanel
       token={fromToken}
       usd={usd}
-      onSelectToken={onFromTokenChange}
       inputValue={fromAmount || ""}
       onInputChange={onFromAmountChange}
       label="From"
       isSrc={true}
-      balance={balance}
     />
   );
 };
 
 const ToTokenPanel = () => {
-  const { onToTokenChange, toToken, onToAmountChange } = useSwapStore();
+  const onToAmountChange = useSwapStore(s => s.onToAmountChange);
   const amount = useToAmount()?.uiAmount;
+  const toToken  = useToToken()
 
-  const usd = useTokenAmountUSD(toToken, amount);
+  const usd = useTokenAmountUSD(toToken?.address, amount);
   const toAmount = useToAmount();
   const inputValue = useFormatNumber({ value: toAmount?.uiAmount });
-  const balance = useTokenFromTokenList(toToken)?.balance;
 
   return (
     <TokenPanel
       token={toToken}
       usd={usd}
-      onSelectToken={onToTokenChange}
       inputValue={inputValue || ""}
       onInputChange={onToAmountChange}
       label="To"
-      balance={balance}
     />
   );
 };
@@ -215,19 +194,16 @@ const TokenPanelHeader = ({
 };
 
 const TokenPanel = ({
-  usd,
-  onSelectToken,
   inputValue,
   onInputChange,
   token,
   label,
   isSrc,
-  balance,
 }: TokenPanelProps) => {
   const [open, setOpen] = useState(false);
   const { uiSettings } = useWidgetContext();
+  const usd = useTokenAmountUSD(token?.address, inputValue);
   const styles = uiSettings?.styles?.tokenPanel?.container;
-
   const settings = uiSettings?.layout?.tokenPanel;
   const headerOutside = settings?.headerOutside;
   const inputLeft = settings?.inputSide === "left";
@@ -263,51 +239,16 @@ const TokenPanel = ({
               width: "100%",
             }}
           >
-            <Balance value={balance} />
+            <Balance value={token?.balance} />
             <USD value={usd} />
           </FlexRow>
         </StyledTokenPanelContent>
       </StyledTokenPanel>
       <TokenModal
-        onTokenSelect={onSelectToken}
+        isFromToken={isSrc}
         open={open}
         onClose={() => setOpen(false)}
       />
     </>
-  );
-};
-
-export const Widget = (args: WidgetArgs) => {
-  const theme = useMemo(() => getTheme(args.uiSettings), [args.uiSettings]);
-  const { provider, address, partner, connectedChainId } = args;
-
-  useEffect(() => {
-    setWeb3Instance(new Web3(provider));
-  }, [provider]);
-
-  if (!partner) {
-    return (
-      <div>
-        <Text>Partner is required</Text>
-      </div>
-    );
-  }
-  return (
-    <QueryClientProvider client={client}>
-      <LiquidityHubProvider
-        provider={provider}
-        account={address}
-        partner={partner}
-        chainId={connectedChainId}
-        apiUrl={args.apiUrl}
-        quoteInterval={args.quoteInterval}
-      >
-        <ThemeProvider theme={theme}>
-          <WidgetContextProvider widgetArgs={args}>
-            <Swap className={args.className} />
-          </WidgetContextProvider>
-        </ThemeProvider>
-      </LiquidityHubProvider>
-    </QueryClientProvider>
   );
 };

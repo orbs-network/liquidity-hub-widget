@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSwapStore } from "./store";
 import BN from "bignumber.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Token } from "./type";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   zeroAddress,
   isNativeAddress,
@@ -12,12 +11,9 @@ import {
   eqIgnoreCase,
   switchMetaMaskNetwork,
 } from "@defi.org/web3-candies";
-import {
-  useLiquidityHub,
-  Token as LHToken,
-} from "@orbs-network/liquidity-hub-lib";
+import { useLiquidityHub } from "@orbs-network/liquidity-hub-lib";
 import { DEFAULT_SLIPPAGE, QUERY_KEYS } from "./consts";
-import { amountBN, amountUi, fetchPrice, tokensWithBalances } from "./util";
+import { amountUi, fetchPrice, tokensWithBalances } from "./util";
 import Web3 from "web3";
 import _ from "lodash";
 import { useWidgetContext } from "lib/context";
@@ -25,60 +21,29 @@ import { getChainConfig } from "lib/chains";
 
 export const useToAmount = () => {
   const { quote } = useLiquidityHubWithArgs();
-  const { toToken, toAmount, swapTypeIsBuy } = useSwapStore();
+  const toAmount = useSwapStore((s) => s.toAmount);
   return useMemo(() => {
-    if (!toToken) return;
-    if (swapTypeIsBuy) {
-      return {
-        rawAmount: amountBN(toToken.decimals, toAmount).toString(),
-        uiAmount: toAmount,
-      };
-    }
     return {
       rawAmount: quote?.outAmount,
       uiAmount: quote?.outAmountUI,
     };
-  }, [toToken, quote, swapTypeIsBuy, toAmount]);
+  }, [quote, toAmount]);
 };
 
-export const useFromAmount = () => {
-  const { quote } = useLiquidityHubWithArgs();
-  const { fromToken, fromAmount, swapTypeIsBuy } = useSwapStore();
-  return useMemo(() => {
-    if (!fromToken) return;
-    if (swapTypeIsBuy) {
-      return quote?.outAmountUI;
-    }
-    return fromAmount;
-  }, [fromToken, quote, swapTypeIsBuy, fromAmount]);
-};
-
-const useTokensQueryKey = () => {
-  const { address, connectedChainId } = useWidgetContext();
-  const web3 = useWeb3();
-  return [QUERY_KEYS.GET_TOKENS, connectedChainId, address, web3?.version];
-};
 export const useGetTokensQuery = () => {
-  const { updateStore } = useSwapStore((s) => ({
-    fromToken: s.fromToken,
-    updateStore: s.updateStore,
-  }));
   const { address, connectedChainId } = useWidgetContext();
   const wrongChain = useIsWrongChain();
-
   const web3 = useWeb3();
-  const queryKey = useTokensQueryKey();
+  const { updateStore, fromTokenAddress } = useSwapStore((s) => ({
+    updateStore: s.updateStore,
+    fromTokenAddress: s.fromTokenAddress,
+  }));
   const chainConfig = getChainConfig(connectedChainId!);
-  const chainRef = useRef<number | undefined>(undefined);
 
   return useQuery({
     queryFn: async () => {
-      if (address && !web3) return [];
       let tokens = await chainConfig!.getTokens();
-
-      if (address && web3) {
-        tokens = await tokensWithBalances(web3, address, tokens);
-      }
+      tokens = await tokensWithBalances(tokens, web3, address);
 
       let sorted = _.orderBy(
         tokens,
@@ -88,6 +53,14 @@ export const useGetTokensQuery = () => {
         ["desc"]
       );
 
+      console.log({ sorted });
+      
+      const isValidFromToken = _.find(sorted, (t) =>
+        eqIgnoreCase(t.address, fromTokenAddress || "")
+      );
+      if (!isValidFromToken) {
+        updateStore({ fromTokenAddress: sorted[1].address });
+      }
       const nativeTokenIndex = _.findIndex(tokens, (t) =>
         eqIgnoreCase(t.address, zeroAddress)
       );
@@ -96,39 +69,44 @@ export const useGetTokensQuery = () => {
       sorted = sorted.filter((t) => !eqIgnoreCase(t.address, zeroAddress));
       sorted.unshift(nativeToken);
 
-      if (chainRef.current !== connectedChainId) {
-        updateStore({ fromToken: sorted[1] });
-        chainRef.current = connectedChainId;
-      }
       return sorted;
     },
-    queryKey,
+    queryKey: [QUERY_KEYS.GET_TOKENS, connectedChainId, address, web3?.version],
     enabled: !!chainConfig && !!connectedChainId && !wrongChain,
     refetchInterval: 60_000,
+    staleTime: Infinity,
   });
 };
 
-export const useUSDPriceQuery = (address?: string) => {
-  const chainId = useWidgetContext().connectedChainId;
+export const useUSDPriceQuery = (address?: string, disabled?: boolean) => {
+  const { connectedChainId: chainId, getUsdPrice } = useWidgetContext();
 
   return useQuery({
     queryFn: async () => {
       const wTokenAddress = getChainConfig(chainId!)?.wToken?.address;
       if (!chainId || !address || !wTokenAddress) return 0;
 
-      return fetchPrice(
-        isNativeAddress(address) ? wTokenAddress : address,
-        chainId
-      );
+      const _address = isNativeAddress(address) ? wTokenAddress : address;
+
+      if (getUsdPrice) {
+        return getUsdPrice(_address, chainId);
+      }
+      return fetchPrice(_address, chainId);
     },
     queryKey: [QUERY_KEYS.USD_PRICE, chainId, address],
     refetchInterval: 10_000,
     staleTime: Infinity,
+    retry: 1,
+    enabled: !disabled,
   });
 };
 
-export const useTokenAmountUSD = (token?: Token, amount?: string) => {
-  const { data: usd } = useUSDPriceQuery(token?.address);
+export const useTokenAmountUSD = (
+  address?: string,
+  amount?: string,
+  disabled?: boolean
+) => {
+  const { data: usd } = useUSDPriceQuery(address, disabled);
 
   return useMemo(() => {
     if (!amount || !usd) return "";
@@ -152,7 +130,10 @@ export const useSwitchNetwork = () => {
 };
 
 export const useSubmitButton = () => {
-  const {fromToken, toToken, updateStore } = useSwapStore();
+  const { updateStore, fromAmount } = useSwapStore((s) => ({
+    fromAmount: s.fromAmount,
+    updateStore: s.updateStore,
+  }));
   const {
     confirmSwap,
     swapLoading,
@@ -161,21 +142,20 @@ export const useSubmitButton = () => {
     quoteError,
     analytics: { initSwap },
   } = useLiquidityHubWithArgs();
-  const fromAmount = useFromAmount();
   const toAmount = useToAmount();
   const refetchBalances = useRefetchBalancesCallback();
 
   const swap = useCallback(async () => {
     initSwap();
-    const onSuccess = () => {
-      refetchBalances();
 
-      updateStore({
-        fromAmount: "",
-      });
-    };
-
-    confirmSwap({onSuccess});
+    confirmSwap({
+      onSuccess: () => {
+        refetchBalances();
+        updateStore({
+          fromAmount: "",
+        });
+      },
+    });
   }, [confirmSwap, refetchBalances, updateStore, initSwap]);
 
   const { onConnect, address, partnerChainId } = useWidgetContext();
@@ -183,7 +163,8 @@ export const useSubmitButton = () => {
     useSwitchNetwork();
   const wrongChain = useIsWrongChain();
   const outAmount = quote?.outAmount;
-  const fromTokenBalance = useTokenFromTokenList(fromToken)?.balance;
+  const fromToken = useFromToken();
+  const toToken = useToToken();
 
   if (!address) {
     return {
@@ -225,7 +206,7 @@ export const useSubmitButton = () => {
   }
 
   const fromAmountBN = new BN(fromAmount || "0");
-  const fromTokenBalanceBN = new BN(fromTokenBalance || "0");
+  const fromTokenBalanceBN = new BN(fromToken.balance || "0");
   if (fromAmountBN.gt(fromTokenBalanceBN)) {
     return {
       disabled: true,
@@ -253,93 +234,58 @@ export const useSubmitButton = () => {
   };
 };
 
-const useParseTokensForLh = () => {
-  const { fromToken, toToken } = useSwapStore((s) => ({
-    fromToken: s.fromToken,
-    toToken: s.toToken,
+export const useFromToken = () => {
+  const { fromTokenAddress } = useSwapStore((s) => ({
+    fromTokenAddress: s.fromTokenAddress,
   }));
 
-  return useMemo((): { fromToken: LHToken; toToken: LHToken } | undefined => {
-    if (!fromToken || !toToken) return undefined;
+  return useTokenFromTokenList(fromTokenAddress);
+};
 
-    return {
-      fromToken: {
-        address: fromToken?.address,
-        symbol: fromToken?.symbol,
-        decimals: fromToken?.decimals,
-        logoUrl: fromToken?.logoUrl,
-      },
-      toToken: {
-        address: toToken?.address,
-        symbol: toToken?.symbol,
-        decimals: toToken?.decimals,
-        logoUrl: toToken?.logoUrl,
-      },
-    };
-  }, [fromToken, toToken]);
+export const useToToken = () => {
+  const { toToken } = useSwapStore((s) => ({
+    toToken: s.toTokenAddress,
+  }));
+
+  return useTokenFromTokenList(toToken);
 };
 
 export const useLiquidityHubWithArgs = () => {
-  const { fromAmount, toAmount, fromToken, toToken, swapTypeIsBuy } =
-    useSwapStore((s) => ({
-      fromAmount: s.fromAmount,
-      toAmount: s.toAmount,
-      fromToken: s.fromToken,
-      toToken: s.toToken,
-      swapTypeIsBuy: s.swapTypeIsBuy,
-    }));
+  const fromAmount = useSwapStore((s) => s.fromAmount);
+  const fromToken = useFromToken();
+  const toToken = useToToken();
   const fromTokenUsd = useUSDPriceQuery(fromToken?.address).data;
   const toTokenUsd = useUSDPriceQuery(toToken?.address).data;
-  const parsedTokens = useParseTokensForLh();
   const { slippage } = useWidgetContext();
 
   return useLiquidityHub({
-    fromToken: parsedTokens?.fromToken,
-    toToken: parsedTokens?.toToken,
-    fromAmountUI: swapTypeIsBuy ? toAmount : fromAmount,
+    fromToken,
+    toToken,
+    fromAmountUI: fromAmount,
     toTokenUsd,
     fromTokenUsd,
     slippage: slippage || DEFAULT_SLIPPAGE,
-    swapTypeIsBuy,
   });
 };
 
 export const useRefetchBalancesCallback = () => {
-  const client = useQueryClient();
-  const web3 = useWeb3();
-  const { address } = useWidgetContext();
-  const { fromToken, toToken, updateStore } = useSwapStore((s) => ({
-    fromToken: s.fromToken,
-    toToken: s.toToken,
-    updateStore: s.updateStore,
-  }));
-  const queryKey = useTokensQueryKey();
+  const updateStore = useSwapStore((s) => s.updateStore);
+  const { refetch } = useGetTokensQuery();
 
   return useCallback(async () => {
-    if (!address || !fromToken || !toToken || !web3) return;
-    updateStore({
-      fetchingBalancesAfterTx: true,
-    });
-    const [updatedFromToken, updateToToken] = await tokensWithBalances(
-      web3,
-      address,
-      [fromToken, toToken]
-    );
-
-    client.setQueryData(queryKey, (old?: Token[]) => {
-      if (!old) return old;
-      return old.map((t: Token) => {
-        if (eqIgnoreCase(t.address, updatedFromToken.address))
-          return updatedFromToken;
-        if (eqIgnoreCase(t.address, updateToToken.address))
-          return updateToToken;
-        return t;
+    try {
+      updateStore({
+        fetchingBalancesAfterTx: true,
       });
-    });
-    updateStore({
-      fetchingBalancesAfterTx: false,
-    });
-  }, [address, fromToken, toToken, web3, updateStore, client, queryKey]);
+      await refetch();
+    } catch (error) {
+      console.error("Failed to refetch balances after tx", error);
+    } finally {
+      updateStore({
+        fetchingBalancesAfterTx: false,
+      });
+    }
+  }, [updateStore]);
 };
 
 export function useDebounce(value: string, delay: number) {
@@ -397,21 +343,19 @@ export const useTxEstimateGasPrice = () => {
   }, [price, nativeTokenDecimals, nativeTokenPrice]);
 };
 
-export const useTokenFromTokenList = (token?: Token) => {
+export const useTokenFromTokenList = (address?: string) => {
   const { data: tokens, dataUpdatedAt } = useGetTokensQuery();
   return useMemo(() => {
-    if (!token || !tokens) return undefined;
-    return tokens.find((t) => eqIgnoreCase(t.address, token.address));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, dataUpdatedAt]);
+    if (!address || !tokens) return undefined;
+    console.log({ address });
+    
+    return tokens.find((t) => eqIgnoreCase(t?.address || '', address));
+  }, [address, dataUpdatedAt]);
 };
 
 export const useOnPercentClickCallback = () => {
-  const { fromToken, updateStore } = useSwapStore((s) => ({
-    fromToken: s.fromToken,
-    updateStore: s.updateStore,
-  }));
-  const fromTokenBalance = useTokenFromTokenList(fromToken)?.balance;
+  const updateStore = useSwapStore((s) => s.updateStore);
+  const fromTokenBalance = useFromToken()?.balance;
 
   return useCallback(
     (percent: number) => {
@@ -438,3 +382,25 @@ export const useIsWrongChain = () => {
     return connectedChainId !== partnerChainId;
   }, [connectedChainId, partnerChainId]);
 };
+
+export function useIsInViewport(ref: any) {
+  const [isIntersecting, setIsIntersecting] = useState(false);
+
+  const observer = useMemo(
+    () =>
+      new IntersectionObserver(([entry]) =>
+        setIsIntersecting(entry.isIntersecting)
+      ),
+    []
+  );
+
+  useEffect(() => {
+    observer.observe(ref.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [ref, observer]);
+
+  return isIntersecting;
+}

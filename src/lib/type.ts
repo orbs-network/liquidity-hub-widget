@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CSSObject } from "styled-components";
-
+import {Token as LHToken} from "@orbs-network/liquidity-hub-lib"
 
 export interface Network {
   native: Token;
@@ -14,8 +14,6 @@ export interface Network {
 
 export interface TokenPanelProps {
   usd?: string | number;
-  balance?: string;
-  onSelectToken: (token: Token) => void;
   inputValue?: string;
   onInputChange?: (value: string) => void;
   token?: Token;
@@ -23,11 +21,7 @@ export interface TokenPanelProps {
   isSrc?: boolean;
 }
 
-export interface Token {
-  address: string;
-  symbol: string;
-  decimals: number;
-  logoUrl?: string;
+export interface Token extends LHToken {
   name?: string;
   balance?: string;
 }
@@ -68,7 +62,7 @@ export interface WidgetUISettings {
   };
 }
 
-export type WidgetArgs = {
+export interface ProviderArgs  {
   provider?: any;
   address?: string;
   connectedChainId?: number;
@@ -80,4 +74,10 @@ export type WidgetArgs = {
   quoteInterval?: number;
   slippage?: number;
   className?: string;
+  getUsdPrice?: (address: string, chainId:number) => Promise<number>;
 };
+
+
+export interface ProviderArgsWithChildren extends ProviderArgs {
+  children: React.ReactNode;
+}

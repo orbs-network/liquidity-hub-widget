@@ -1,18 +1,13 @@
-import React, { ReactNode } from "react";
-import { WidgetArgs } from "lib/type";
+import React from "react";
+import { ProviderArgs, ProviderArgsWithChildren } from "./type";
 
-interface Context extends WidgetArgs {}
 
-interface Props extends WidgetArgs {
-  children: ReactNode;
-  widgetArgs: WidgetArgs;
-}
 
-const Context = React.createContext({} as Context);
+const Context = React.createContext({} as ProviderArgs);
 
-export const WidgetContextProvider = (props: Props) => {
-  const { widgetArgs, children } = props;
-  return <Context.Provider value={widgetArgs}>{children}</Context.Provider>;
+
+export const WidgetContextProvider = (args: ProviderArgsWithChildren) => {
+  return <Context.Provider value={args}>{args.children}</Context.Provider>;
 };
 
 export const useWidgetContext = () => React.useContext(Context);

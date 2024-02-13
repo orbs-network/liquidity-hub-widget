@@ -1,10 +1,10 @@
 import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
-import { WidgetUISettings } from "lib";
 import { RainbowProvider } from "RainbowProvider";
 import { useMemo } from "react";
 import { useAccount, useConfig, useNetwork } from "wagmi";
-import { Widget } from "./lib/widget/Widget";
 import styled from "styled-components";
+import { UIProvider } from "lib/provider";
+import { supportedChainsConfig, Widget } from "lib";
 export const useProvider = () => {
   const { data } = useConfig();
 
@@ -21,14 +21,16 @@ function Wrapped() {
   const connectedChainId = useNetwork().chain?.id;
 
   return (
-    <Widget
+    <UIProvider
       provider={provider}
       onConnect={openConnectModal}
       connectedChainId={connectedChainId}
       partner="playground"
       address={address}
-      partnerChainId={137}
-    />
+      partnerChainId={supportedChainsConfig.polygon.chainId}
+    >
+      <Widget />
+    </UIProvider>
   );
 }
 

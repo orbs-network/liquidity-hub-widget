@@ -3,7 +3,6 @@ import axios from "axios";
 import _ from "lodash";
 import { Network, Token } from "lib/type";
 
-
 class Polygon implements Network {
   native = networks.poly.native;
   wToken = networks.poly.wToken;
@@ -81,29 +80,57 @@ class ZkEvm implements Network {
   chainId = 1101;
   chainName = "Polygon ZkEVM";
   getTokens = async (): Promise<Token[]> => {
-    let tokens = await(
+    let tokens = await (
       await axios.get(
         "https://unpkg.com/quickswap-default-token-list@1.3.21/build/quickswap-default.tokenlist.json"
       )
     ).data.tokens;
-  
-    const res =  tokens.filter((it: any) => it.chainId === this.chainId).map((it: any) => {
-      return {
-        address: it.address,
-        symbol: it.symbol,
-        decimals: it.decimals,
-        logoUrl: it.logoURI,
-      };
-    });
-    return [this.native, ...res]
+
+    const res = tokens
+      .filter((it: any) => it.chainId === this.chainId)
+      .map((it: any) => {
+        return {
+          address: it.address,
+          symbol: it.symbol,
+          decimals: it.decimals,
+          logoUrl: it.logoURI,
+        };
+      });
+    return [this.native, ...res];
   };
 }
 
+class Base implements Network {
+  native = networks.eth.native;
+  wToken = networks.base.wToken;
+  chainId = 8453;
+  chainName = "Base";
+  getTokens = async (): Promise<Token[]> => {
+    let tokens = await (
+      await axios.get(
+        "https://raw.githubusercontent.com/ethereum-optimism/ethereum-optimism.github.io/master/optimism.tokenlist.json"
+      )
+    ).data.tokens;
+
+    const res = tokens
+      .filter((token: any) => token.chainId === 8453)
+      .map((it: any): Token => {
+        return {
+          address: it.address,
+          decimals: it.decimals,
+          symbol: it.symbol,
+          logoUrl: it.logoURI,
+        };
+      });
+    return [this.native, ...res];
+  };
+}
 
 export const supportedChainsConfig = {
   polygon: new Polygon(),
   bsc: new Bsc(),
   skevm: new ZkEvm(),
+  base: new Base(),
 };
 
 export const getChainConfig = (chainId?: number): Network | undefined => {

@@ -1,7 +1,7 @@
 import { PriceCompare } from "./PriceCompare";
 import styled from "styled-components";
 import { Text } from "../Text";
-import { useToAmount, useTxEstimateGasPrice } from "../../hooks";
+import { useToAmount, useToToken, useTxEstimateGasPrice } from "../../hooks";
 import { useSwapStore } from "../../store";
 import { ReactNode, useMemo, useState } from "react";
 import BN from "bignumber.js";
@@ -51,7 +51,7 @@ const StyledRow = styled(FlexRow)`
 const MinAmountOut = () => {
   const toAmount = useToAmount()?.uiAmount;
   const slippage = DEFAULT_SLIPPAGE;
-  const symbol = useSwapStore((s) => s.toToken)?.symbol;
+  const symbol = useToToken()?.symbol;
   const minAmountOut = useMemo(() => {
     if (!toAmount || !slippage) return "0";
     const _slippage = slippage / 2;
@@ -80,13 +80,9 @@ const StyledDetails = styled(FlexColumn)`
 
 export function SwapDetails({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
-  const { fromToken, toToken, fromAmount } = useSwapStore((s) => ({
-    fromToken: s.fromToken,
-    toToken: s.toToken,
-    fromAmount: s.fromAmount,
-  }));
+  const fromAmount = useSwapStore((s) => s.fromAmount);
 
-  if (!fromToken || !toToken || !fromAmount) return null;
+  if ( !fromAmount) return null;
   return (
     <StyledSwapDetails className={className}>
       <StyledTop>
