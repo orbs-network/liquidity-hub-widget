@@ -3,11 +3,11 @@ export { Widget } from "./widget/Widget";
 export type { ProviderArgs, WidgetUISettings, Network, Token } from "./type";
 export { supportedChainsConfig, getChainConfig } from "./chains";
 export {
-  useGetTokensQuery as useTokensList,
-  useTokenAmountUSD,
+  useTokens,
+  useUsdAmount,
   useToAmount,
-  useSubmitButton,
-  useGasPriceQuery,
+  useTradeButton,
+  useGasPrice,
   useTxEstimateGasPrice,
   useFromToken,
   useToToken,

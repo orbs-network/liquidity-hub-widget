@@ -1,13 +1,11 @@
-import { setWeb3Instance } from "@defi.org/web3-candies";
 import { LiquidityHubProvider } from "@orbs-network/liquidity-hub-lib";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Text } from "lib/components/Text";
 import { WidgetContextProvider } from "lib/context";
 import { getTheme } from "lib/theme";
-import {ProviderArgsWithChildren } from "lib/type";
-import { useEffect, useMemo } from "react";
+import { ProviderArgs } from "lib/type";
+import { ReactNode, useMemo } from "react";
 import { ThemeProvider } from "styled-components";
-import Web3 from "web3";
 const client = new QueryClient({
   defaultOptions: {
     queries: {
@@ -16,16 +14,17 @@ const client = new QueryClient({
   },
 });
 
+interface Props extends ProviderArgs {
+  children: ReactNode;
+}
 
 
-export function UIProvider(args: ProviderArgsWithChildren) {
-  const theme = useMemo(() => getTheme(args.uiSettings), [args.uiSettings]);
-  const { provider, address, partner, connectedChainId } = args;
-
-  useEffect(() => {
-    setWeb3Instance(new Web3(provider));
-  }, [provider]);
-
+export function UIProvider(args: Props) {
+  const theme = useMemo(
+    () => getTheme(args.widgetSettings),
+    [args.widgetSettings]
+  );
+  const { provider, account, partner, chainId } = args;
   if (!partner) {
     return (
       <div>
@@ -33,18 +32,21 @@ export function UIProvider(args: ProviderArgsWithChildren) {
       </div>
     );
   }
+
   return (
     <QueryClientProvider client={client}>
       <LiquidityHubProvider
         provider={provider}
-        account={address}
+        account={account}
         partner={partner}
-        chainId={connectedChainId}
+        chainId={chainId}
         apiUrl={args.apiUrl}
         quoteInterval={args.quoteInterval}
       >
         <ThemeProvider theme={theme}>
-          <WidgetContextProvider {...args} />
+          <WidgetContextProvider args={args}>
+            {args.children}
+          </WidgetContextProvider>
         </ThemeProvider>
       </LiquidityHubProvider>
     </QueryClientProvider>

@@ -1,7 +1,7 @@
 import { useSubmitButton } from "../hooks";
 import styled from "styled-components";
 import { Spinner } from "@orbs-network/liquidity-hub-lib";
-import { useWidgetContext } from "lib/context";
+import { useSharedContext } from "lib/context";
 export const SwapSubmitButton = ({
   className = "",
 }: {
@@ -9,7 +9,7 @@ export const SwapSubmitButton = ({
 }) => {
   const { disabled, text, onClick, isLoading } = useSubmitButton();
 
-  const btnStyles = useWidgetContext().uiSettings?.styles?.submitButton;
+  const btnStyles = useSharedContext().uiSettings?.styles?.submitButton;
 
   return (
     <StyledSubmitButton

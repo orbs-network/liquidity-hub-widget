@@ -5,21 +5,18 @@ import styled from "styled-components";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
 
-import { eqIgnoreCase, TokenData } from "@defi.org/web3-candies";
-import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
+import { contract, eqIgnoreCase, TokenData } from "@defi.org/web3-candies";
+import { useContract, useFormatNumber } from "@orbs-network/liquidity-hub-lib";
 import { useQuery } from "@tanstack/react-query";
 import _ from "lodash";
 import { FlexRow, FlexColumn } from "lib/base-styles";
-import { Token } from "lib/type";
-import {
-  useTokenAmountUSD,
-  useGetTokensQuery,
-  useTokenContract,
-} from "lib/hooks";
+import { RenderListTokenValues, Token } from "lib/type";
 import { useSwapStore } from "lib/store";
 import { Logo } from "./Logo";
 import { StyledListToken } from "./TokenSelectModal/styles";
 import { Text } from "./Text";
+import { useUsdAmount } from "lib/hooks/useUsdAmount";
+import { useTokens } from "lib/hooks/useTokens";
 
 const filterTokens = (list: Token[], filterValue: string) => {
   if (!filterValue) return list;
@@ -42,9 +39,9 @@ const Row = ({
   data: any;
 }) => {
   const token: Token = data.tokens[index];
-  const usd = useTokenAmountUSD(token.address, token.balance);
+  const usd = useUsdAmount(token.address, token.balance);
   const _balance = useFormatNumber({ value: token.balance, decimalScale: 4 });
-  const _usd = useFormatNumber({ value: usd, decimalScale: 4, prefix: "$" });
+  const _usd = useFormatNumber({ value: usd, decimalScale: 4 });
   const { fromTokenAddress, toTokenAddress } = useSwapStore((store) => {
     return {
       fromTokenAddress: store.fromTokenAddress,
@@ -107,7 +104,7 @@ const Row = ({
               }}
             >
               <StyledBalance className="balance">{_balance}</StyledBalance>
-              <StyledUSD className="usd">{_usd}</StyledUSD>
+              <StyledUSD className="usd">${_usd}</StyledUSD>
             </FlexColumn>
           </StyledListToken>
         )}
@@ -129,11 +126,11 @@ const StyledUSD = styled(Text)`
   font-size: 12px;
   opacity: 0.8;
 `;
-
+contract
 const useFilterTokens = (addressOrSymbol?: string) => {
-  const { data: tokens = [] } = useGetTokensQuery();
+  const { data: tokens = [] } = useTokens();
 
-  const tokenContract = useTokenContract(addressOrSymbol);
+  const tokenContract = useContract(addressOrSymbol);
   return useQuery<TokenData[]>({
     queryKey: ["useFindToken", addressOrSymbol, _.size(tokens)],
     queryFn: async () => {
@@ -178,15 +175,7 @@ export function TokenList({
   filterValue?: string;
   itemSize?: number;
   isFromToken?: boolean;
-  renderItem?: ({
-    token,
-    balance,
-    usd,
-  }: {
-    token: Token;
-    balance: string;
-    usd: string;
-  }) => ReactElement;
+  renderItem?: (args: RenderListTokenValues) => ReactElement;
 }) {
   const { data: filteredTokens } = useFilterTokens(filterValue);
   const { onToTokenChange, onFromTokenChange } = useSwapStore((s) => ({

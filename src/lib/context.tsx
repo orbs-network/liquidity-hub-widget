@@ -1,13 +1,19 @@
-import React from "react";
-import { ProviderArgs, ProviderArgsWithChildren } from "./type";
+import React, { ReactNode } from "react";
+import { ProviderArgs } from "./type";
 
 
 
 const Context = React.createContext({} as ProviderArgs);
 
 
-export const WidgetContextProvider = (args: ProviderArgsWithChildren) => {
-  return <Context.Provider value={args}>{args.children}</Context.Provider>;
+export const WidgetContextProvider = ({
+  args,
+  children,
+}: {
+  args: ProviderArgs;
+  children: ReactNode;
+}) => {
+  return <Context.Provider value={args}>{children}</Context.Provider>;
 };
 
-export const useWidgetContext = () => React.useContext(Context);
+export const useSharedContext = () => React.useContext(Context);

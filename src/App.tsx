@@ -24,9 +24,9 @@ function Wrapped() {
     <UIProvider
       provider={provider}
       onConnect={openConnectModal}
-      connectedChainId={connectedChainId}
+      chainId={connectedChainId}
       partner="playground"
-      address={address}
+      account={address}
       partnerChainId={supportedChainsConfig.polygon.chainId}
     >
       <Widget />

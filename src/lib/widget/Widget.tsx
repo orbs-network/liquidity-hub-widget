@@ -1,15 +1,9 @@
 import { useState } from "react";
-import {
-  useFromToken,
-  useOnPercentClickCallback,
-  useToAmount,
-  useTokenAmountUSD,
-  useToToken,
-} from "lib/hooks";
+
 import { useSwapStore } from "lib/store";
 import { TokenPanelProps } from "../type";
-import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
-import { useWidgetContext } from "lib/context";
+import { SwapModal, useFormatNumber } from "@orbs-network/liquidity-hub-lib";
+import { useSharedContext } from "lib/context";
 import {
   StyledChangeTokens,
   StyledContainer,
@@ -29,6 +23,10 @@ import { USD } from "lib/components/USD";
 import { Logo } from "lib/components/Logo";
 import { FlexRow } from "lib/base-styles";
 import { SwapSubmitButton } from "lib/components/SwapSubmitButton";
+import { useToken } from "lib/hooks/useToken";
+import { useUsdAmount } from "lib/hooks/useUsdAmount";
+import { useToAmount } from "lib/hooks";
+import { usePercentSelect } from "lib/hooks/usePercentSelect";
 
 const defaultPercentButtons = [
   { label: "25%", value: 0.25 },
@@ -38,11 +36,11 @@ const defaultPercentButtons = [
 ];
 
 const PercentButtons = () => {
-  const onPercentageChange = useOnPercentClickCallback();
+  const onPercentageChange = usePercentSelect();
   const styles =
-    useWidgetContext().uiSettings?.styles?.tokenPanel?.percentButtons;
+    useSharedContext().widgetSettings?.styles?.tokenPanel?.percentButtons;
   const percentButtons =
-    useWidgetContext().uiSettings?.config?.percentButtons ||
+    useSharedContext().widgetSettings?.config?.percentButtons ||
     defaultPercentButtons;
   return (
     <StyledPercentButtons className="clob-token-panel-percent" $style={styles}>
@@ -71,7 +69,7 @@ const TokenSelect = ({
   onClick: () => void;
 }) => {
   const styles =
-    useWidgetContext().uiSettings?.styles?.tokenPanel?.tokenSelector;
+    useSharedContext().widgetSettings?.styles?.tokenPanel?.tokenSelector;
 
   return (
     <StyledTokenSelect
@@ -100,6 +98,7 @@ export function Widget({ className = "" }: { className?: string }) {
       <ToTokenPanel />
       <StyledSwapDetails />
       <SwapSubmitButton />
+      <SwapModal />
     </Container>
   );
 }
@@ -111,7 +110,7 @@ const Container = ({
   children: React.ReactNode;
   className?: string;
 }) => {
-  const containerStyles = useWidgetContext().uiSettings?.styles?.container;
+  const containerStyles = useSharedContext().widgetSettings?.styles?.container;
 
   return (
     <StyledContainer className={className} $style={containerStyles}>
@@ -122,7 +121,7 @@ const Container = ({
 
 const ChangeTokens = () => {
   const onSwitchTokens = useSwapStore((store) => store.onSwitchTokens);
-  const styles = useWidgetContext().uiSettings?.styles?.switchTokens;
+  const styles = useSharedContext().widgetSettings?.styles?.switchTokens;
 
   return (
     <StyledChangeTokens
@@ -137,10 +136,16 @@ const ChangeTokens = () => {
 };
 
 const FromTokenPanel = () => {
-  const { onFromAmountChange, fromAmount } = useSwapStore();
-  const fromToken = useFromToken()
+  const { onFromAmountChange, fromAmount, fromTokenAddress } = useSwapStore(
+    (s) => ({
+      onFromAmountChange: s.onFromAmountChange,
+      fromAmount: s.fromAmount,
+      fromTokenAddress: s.fromTokenAddress,
+    })
+  );
+  const fromToken = useToken(fromTokenAddress);
 
-  const usd = useTokenAmountUSD(fromToken?.address, fromAmount);
+  const usd = useUsdAmount(fromTokenAddress, fromAmount);
 
   return (
     <TokenPanel
@@ -155,11 +160,14 @@ const FromTokenPanel = () => {
 };
 
 const ToTokenPanel = () => {
-  const onToAmountChange = useSwapStore(s => s.onToAmountChange);
+  const { onToAmountChange, toTokenAddress } = useSwapStore((s) => ({
+    onToAmountChange: s.onToAmountChange,
+    toTokenAddress: s.toTokenAddress,
+  }));
   const amount = useToAmount()?.uiAmount;
-  const toToken  = useToToken()
+  const toToken = useToken(toTokenAddress);
 
-  const usd = useTokenAmountUSD(toToken?.address, amount);
+  const usd = useUsdAmount(toTokenAddress, amount);
   const toAmount = useToAmount();
   const inputValue = useFormatNumber({ value: toAmount?.uiAmount });
 
@@ -181,9 +189,9 @@ const TokenPanelHeader = ({
   isSrc?: boolean;
   label?: string;
 }) => {
-  const { uiSettings } = useWidgetContext();
+  const { widgetSettings } = useSharedContext();
 
-  const styles = uiSettings?.styles?.tokenPanel?.header;
+  const styles = widgetSettings?.styles?.tokenPanel?.header;
 
   return (
     <StyledTop className="clob-token-panel-top" $style={styles}>
@@ -201,10 +209,10 @@ const TokenPanel = ({
   isSrc,
 }: TokenPanelProps) => {
   const [open, setOpen] = useState(false);
-  const { uiSettings } = useWidgetContext();
-  const usd = useTokenAmountUSD(token?.address, inputValue);
-  const styles = uiSettings?.styles?.tokenPanel?.container;
-  const settings = uiSettings?.layout?.tokenPanel;
+  const { widgetSettings } = useSharedContext();
+  const usd = useUsdAmount(token?.address, inputValue);
+  const styles = widgetSettings?.styles?.tokenPanel?.container;
+  const settings = widgetSettings?.layout?.tokenPanel;
   const headerOutside = settings?.headerOutside;
   const inputLeft = settings?.inputSide === "left";
   const usdLeft = settings?.usdSide === "left";

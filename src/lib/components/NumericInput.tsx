@@ -1,5 +1,5 @@
 import { FlexRow } from 'lib/base-styles';
-import { useWidgetContext } from 'lib/context';
+import { useSharedContext } from 'lib/context';
 import { NumericFormat } from 'react-number-format';
 import styled from 'styled-components';
 
@@ -34,7 +34,7 @@ export function NumericInput({
   minAmount,
 }: NumericInputProps) {
   const inputValue = value || minAmount || '';
-  const uiSettings = useWidgetContext().uiSettings;
+  const uiSettings = useSharedContext().uiSettings;
     const styles = uiSettings?.styles?.tokenPanel?.input;
 
   return (
