@@ -1,16 +1,16 @@
 import { PriceCompare } from "./PriceCompare";
 import styled from "styled-components";
 import { Text } from "../Text";
-import { useToAmount, useToToken, useTxEstimateGasPrice } from "../../hooks";
-import { useSwapStore } from "../../store";
 import { ReactNode, useMemo, useState } from "react";
 import BN from "bignumber.js";
-import { DEFAULT_SLIPPAGE } from "lib/consts";
-import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
 import { GasIcon } from "lib/assets/svg/gas";
 import { ChevronDown } from "react-feather";
-import AnimateHeight from "react-animate-height";
 import { FlexRow, FlexColumn } from "lib/base-styles";
+import { useFormatNumber } from "lib/hooks/useFormatNumber";
+import { useTransactionEstimateGas } from "lib/hooks/useTransactionEstimateGas";
+import { DEFAULT_SLIPPAGE } from "lib/config/consts";
+import { useWidgetStore } from "../widget/store";
+import { useWidget } from "../widget/hooks";
 
 const StyledRowLabel = styled(Text)`
   font-size: 14px;
@@ -49,9 +49,10 @@ const StyledRow = styled(FlexRow)`
 `;
 
 const MinAmountOut = () => {
-  const toAmount = useToAmount()?.uiAmount;
+  const fromToken = useWidgetStore((s) => s.fromToken);
+  const toAmount = useWidget().quote?.outAmountUI
   const slippage = DEFAULT_SLIPPAGE;
-  const symbol = useToToken()?.symbol;
+  const symbol = fromToken?.symbol;
   const minAmountOut = useMemo(() => {
     if (!toAmount || !slippage) return "0";
     const _slippage = slippage / 2;
@@ -78,11 +79,14 @@ const StyledDetails = styled(FlexColumn)`
   width: 100%;
 `;
 
-export function SwapDetails({ className }: { className?: string }) {
+export function SwapDetails({
+  className,
+}: {
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
-  const fromAmount = useSwapStore((s) => s.fromAmount);
-
-  if ( !fromAmount) return null;
+  const fromAmount = useWidgetStore((s) => s.fromAmount);
+  if (!fromAmount) return null;
   return (
     <StyledSwapDetails className={className}>
       <StyledTop>
@@ -90,18 +94,10 @@ export function SwapDetails({ className }: { className?: string }) {
         <OpenBtn open={open} onClick={() => setOpen(!open)} />
       </StyledTop>
 
-      <AnimateHeight
-      style={{
-        width: '100%',
-      }}
-        duration={150}
-        height={open ? 'auto' : 0} // see props documentation below
-      >
-        <StyledDetails>
-          <TxGasCost />
-          <MinAmountOut />
-        </StyledDetails>
-      </AnimateHeight>
+      <StyledDetails>
+        <TxGasCost />
+        <MinAmountOut />
+      </StyledDetails>
     </StyledSwapDetails>
   );
 }
@@ -112,7 +108,7 @@ const StyledTop = styled(FlexRow)`
 `;
 
 const GasPrice = () => {
-  const txGasPrice = useTxEstimateGasPrice();
+  const txGasPrice = useTransactionEstimateGas();
   const _txGasPrice = useFormatNumber({ value: txGasPrice, decimalScale: 1 });
 
   return (

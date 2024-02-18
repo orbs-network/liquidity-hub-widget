@@ -1,12 +1,13 @@
 import { zeroAddress } from "@defi.org/web3-candies";
-import { amountUi, useChainConfig } from "@orbs-network/liquidity-hub-lib";
+import { amountUi } from "lib/util";
 import { useMemo } from "react";
-import { useGasPriceQuery } from "./useGasPrice";
+import { useChainConfig } from "./useChainConfig";
+import { useGasPrice } from "./useGasPrice";
 import { usePriceUsd } from "./usePriceUsd";
 
 export const useTransactionEstimateGas = () => {
-  const { data: gasPrice } = useGasPriceQuery();
-  const nativeTokenPrice = usePriceUsd(zeroAddress).data;
+  const { data: gasPrice } = useGasPrice();
+  const nativeTokenPrice = usePriceUsd({ address: zeroAddress }).data;
 
   const nativeTokenDecimals = useChainConfig()?.native.decimals;
 

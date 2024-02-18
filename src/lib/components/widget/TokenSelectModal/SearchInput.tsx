@@ -1,7 +1,7 @@
+import { useDebounce } from "lib/hooks/useDebounce";
 import { useEffect, useState } from "react";
-import { useDebounce } from "../../hooks";
 import styled from "styled-components";
-import { TextInput } from "../TextInput";
+import { TextInput } from "../../TextInput";
 export const TokenSearchInput = ({
   setValue,
   className = ''

@@ -1,5 +1,4 @@
 import { FlexRow } from 'lib/base-styles';
-import { useSharedContext } from 'lib/context';
 import { NumericFormat } from 'react-number-format';
 import styled from 'styled-components';
 
@@ -34,8 +33,6 @@ export function NumericInput({
   minAmount,
 }: NumericInputProps) {
   const inputValue = value || minAmount || '';
-  const uiSettings = useSharedContext().uiSettings;
-    const styles = uiSettings?.styles?.tokenPanel?.input;
 
   return (
     <StyledContainer className={`clob-input ${className}`}>
@@ -47,7 +44,6 @@ export function NumericInput({
         }}
       >
         <NumericFormat
-          style={styles}
           allowNegative={false}
           disabled={disabled}
           decimalScale={decimalScale}

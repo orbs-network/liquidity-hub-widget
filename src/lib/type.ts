@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CSSObject } from "styled-components";
-import {Token as LHToken, ProviderArgs as LHProviderArgs } from "@orbs-network/liquidity-hub-lib"
 
 export interface Network {
   native: Token;
@@ -21,18 +20,13 @@ export interface TokenPanelProps {
   isSrc?: boolean;
 }
 
-export interface Token extends LHToken {
+export interface Token {
   name?: string;
-  balance?: string;
+  address: string;
+  decimals: number;
+  symbol: string;
+  logoUrl?: string;
 }
-
-export type RenderListTokenValues = {
-  token: Token;
-  balance: string;
-  usd: string;
-  onSelect: () => void;
-};
-
 
 export interface WidgetUISettings {
   theme?: {
@@ -69,13 +63,177 @@ export interface WidgetUISettings {
   };
 }
 
-export interface ProviderArgs extends LHProviderArgs {
+export interface ProviderArgs {
   partnerChainId?: number;
-  onConnect?: () => void;
   widgetSettings?: WidgetUISettings;
   className?: string;
-  getUsdPrice?: (address: string, chainId: number) => Promise<number>;
   slippage?: number;
+  provider?: any;
+  account?: string;
+  chainId?: number;
+  partner: string;
+  apiUrl?: string;
+  quoteInterval?: number;
+  disableAnalytics?: boolean;
+  web3?: Web3;
 };
 
 
+
+
+
+import Web3 from "web3";
+export interface QuoteArgs {
+  inToken: string;
+  outToken: string;
+  inAmount: string;
+  account?: string;
+  slippage?: number;
+  chainId: number;
+  dexAmountOut?: string;
+  signal?: AbortSignal;
+  partner: string;
+  apiUrl?: string;
+}
+export interface SendTxArgs {
+  user: string;
+  inToken: string;
+  outToken: string;
+  inAmount: string;
+  outAmount: string;
+  signature: string;
+  quoteResult: any;
+  chainId: number;
+}
+
+export interface ApproveArgs {
+  user: string;
+  inToken: string;
+  inAmount: string;
+  provider: any;
+}
+
+export interface SwapState {
+  isWon: boolean;
+  isFailed: boolean;
+  outAmount?: string;
+  waitingForApproval: boolean;
+  waitingForSignature: boolean;
+  isSwapping: boolean;
+  isQuoting: boolean;
+  updateState: (state: Partial<SwapState>) => void;
+}
+
+export interface SubmitTxArgs {
+  srcToken: string;
+  destToken: string;
+  srcAmount: string;
+  signature: string;
+  quote: QuoteResponse;
+}
+
+export interface UseSwapCallback {
+  fromToken?: Token;
+  toToken?: Token;
+  fromAmount?: string;
+  quote?: QuoteResponse;
+  approved?: boolean;
+}
+
+export interface QuoteResponse {
+  outAmount: string;
+  permitData: any;
+  serializedOrder: string;
+  callData: string;
+  rawData: any;
+  outAmountUI: string;
+  outAmountUIWithSlippage?: string;
+}
+
+export enum LH_CONTROL {
+  FORCE = "1",
+  SKIP = "2",
+  RESET = "3",
+}
+
+export enum STEPS {
+  WRAP,
+  APPROVE,
+  SIGN,
+  SEND_TX,
+}
+
+export type ActionStatus = "loading" | "success" | "failed" | undefined;
+
+export interface Step {
+  title: string;
+  loadingTitle: string;
+  link?: { href: string; text: string };
+  image?: string;
+  hidden?: boolean;
+  id: STEPS;
+}
+
+export type QuoteQueryArgs = {
+  fromToken?: Token;
+  toToken?: Token;
+  fromAmount?: string;
+  dexAmountOut?: string;
+  slippage?: number;
+  swapTypeIsBuy?: boolean;
+  disabled?: boolean;
+};
+
+export type ChainConfig = {
+  explorerUrl: string;
+  wTokenAddress: string;
+};
+
+export type UseLiquidityHubArgs = {
+  fromToken?: Token;
+  toToken?: Token;
+  fromAmount?: string;
+  fromAmountUI?: string;
+  fromTokenUsd?: string | number;
+  toTokenUsd?: string | number;
+  dexAmountOut?: string;
+  dexAmountOutUI?: string;
+  slippage?: number;
+  swapTypeIsBuy?: boolean;
+  ignoreSlippage?: boolean;
+  disabled?: boolean;
+};
+
+export type UseConfirmSwap = {
+  args: UseLiquidityHubArgs;
+  quote?: QuoteResponse;
+  tradeOwner?: TradeOwner;
+};
+
+export type ConfirmSwapCallback = {
+  onSuccess?: () => void;
+  fallback?: () => void;
+};
+
+export type TradeOwner = "dex" | "lh";
+
+export type Order = {
+  id: string;
+  fromToken: Token;
+  toToken: Token;
+  fromAmount: string;
+  fromAmountUsd?: string;
+};
+
+export type Orders = { [address: string]: { [chain: string]: Order[] } };
+
+
+
+export interface Network {
+  native: Token;
+  getTokens: () => Promise<Token[]>;
+  wToken?: Token;
+  chainId: number;
+  chainName: string;
+  explorerUrl: string;
+}

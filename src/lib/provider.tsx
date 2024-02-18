@@ -1,11 +1,19 @@
-import { LiquidityHubProvider } from "@orbs-network/liquidity-hub-lib";
+import { setWeb3Instance } from "@defi.org/web3-candies";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Text } from "lib/components/Text";
-import { WidgetContextProvider } from "lib/context";
 import { getTheme } from "lib/theme";
 import { ProviderArgs } from "lib/type";
-import { ReactNode, useMemo } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
 import { ThemeProvider } from "styled-components";
+import { DEFAULT_API_ENDPOINT, DEFAULT_QUOTE_INTERVAL } from "./config/consts";
+import Web3 from "web3";
+import { swapAnalytics } from "./analytics";
+
 const client = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,37 +26,73 @@ interface Props extends ProviderArgs {
   children: ReactNode;
 }
 
+interface ContextArgs extends ProviderArgs {
+  web3?: Web3;
+}
 
-export function UIProvider(args: Props) {
-  const theme = useMemo(
-    () => getTheme(args.widgetSettings),
-    [args.widgetSettings]
+const Context = createContext({} as ContextArgs);
+
+interface Props extends ProviderArgs {
+  children: ReactNode;
+}
+
+export const LiquidityHubProvider = ({
+  children,
+  provider,
+  account,
+  chainId,
+  partner,
+  widgetSettings,
+  quoteInterval = DEFAULT_QUOTE_INTERVAL,
+  apiUrl = DEFAULT_API_ENDPOINT,
+  partnerChainId,
+}: Props) => {
+  const theme = useMemo(() => getTheme(widgetSettings), [widgetSettings]);
+
+  const web3 = useMemo(
+    () => (provider ? new Web3(provider) : undefined),
+    [provider]
   );
-  const { provider, account, partner, chainId } = args;
-  if (!partner) {
-    return (
-      <div>
-        <Text>Partner is required</Text>
-      </div>
-    );
-  }
+
+  useEffect(() => {
+    if (web3) {
+      setWeb3Instance(web3);
+    } else {
+      setWeb3Instance(undefined);
+    }
+  }, [web3]);
+
+  useEffect(() => {
+    if (chainId && partner) {
+      swapAnalytics.setChainId(chainId);
+      swapAnalytics.setPartner(partner);
+    }
+  }, [chainId, partner]);
 
   return (
     <QueryClientProvider client={client}>
-      <LiquidityHubProvider
-        provider={provider}
-        account={account}
-        partner={partner}
-        chainId={chainId}
-        apiUrl={args.apiUrl}
-        quoteInterval={args.quoteInterval}
+      <Context.Provider
+        value={{
+          provider,
+          account,
+          chainId,
+          partner,
+          quoteInterval,
+          apiUrl,
+          web3,
+          partnerChainId,
+        }}
       >
-        <ThemeProvider theme={theme}>
-          <WidgetContextProvider args={args}>
-            {args.children}
-          </WidgetContextProvider>
-        </ThemeProvider>
-      </LiquidityHubProvider>
+        <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      </Context.Provider>
     </QueryClientProvider>
   );
-}
+};
+
+export const useMainContext = () => {
+  const context = useContext(Context);
+  if (!context) {
+    throw new Error("useMainContext must be used within a LHProvider");
+  }
+  return context;
+};

@@ -1,12 +1,22 @@
 import { isNativeAddress } from "@defi.org/web3-candies";
-import { useChainConfig } from "@orbs-network/liquidity-hub-lib";
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS } from "lib/consts";
-import { useSharedContext } from "lib/context";
+import { QUERY_KEYS } from "lib/config/consts";
 import { fetchPrice } from "lib/util";
+import { useChainConfig } from "./useChainConfig";
 
-export const usePriceUsd = (address?: string, disabled?: boolean) => {
-  const { getUsdPrice } = useSharedContext();
+export const usePriceUsd = ({
+  address,
+  disabled,
+  getPrice,
+  refetchInterval = 30_000,
+  noRefetch
+}: {
+  address?: string;
+  disabled?: boolean;
+  getPrice?: (address: string, chainId: number) => Promise<number>;
+  refetchInterval?: number;
+    noRefetch?: boolean;
+}) => {
   const chainConfig = useChainConfig();
   const chainId = chainConfig?.chainId;
   const wTokenAddress = chainConfig?.wToken?.address;
@@ -16,13 +26,13 @@ export const usePriceUsd = (address?: string, disabled?: boolean) => {
 
       const _address = isNativeAddress(address) ? wTokenAddress : address;
 
-      if (getUsdPrice) {
-        return getUsdPrice(_address, chainId);
+      if (getPrice) {
+        return getPrice(_address, chainId);
       }
       return fetchPrice(_address, chainId);
     },
     queryKey: [QUERY_KEYS.USD_PRICE, chainId, address],
-    refetchInterval: 10_000,
+    refetchInterval: noRefetch ? false :  refetchInterval,
     staleTime: Infinity,
     retry: 1,
     enabled: !disabled && !!chainConfig && !!address,

@@ -1,9 +1,9 @@
-import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { RainbowProvider } from "RainbowProvider";
 import { useMemo } from "react";
 import { useAccount, useConfig, useNetwork } from "wagmi";
 import styled from "styled-components";
-import { UIProvider } from "lib/provider";
+import { LiquidityHubProvider } from "lib/provider";
 import { supportedChainsConfig, Widget } from "lib";
 export const useProvider = () => {
   const { data } = useConfig();
@@ -15,22 +15,20 @@ export const useProvider = () => {
 
 
 function Wrapped() {
-  const { openConnectModal } = useConnectModal();
   const { address } = useAccount();
   const provider = useProvider();
   const connectedChainId = useNetwork().chain?.id;
 
   return (
-    <UIProvider
+    <LiquidityHubProvider
       provider={provider}
-      onConnect={openConnectModal}
       chainId={connectedChainId}
       partner="playground"
       account={address}
       partnerChainId={supportedChainsConfig.polygon.chainId}
     >
       <Widget />
-    </UIProvider>
+    </LiquidityHubProvider>
   );
 }
 

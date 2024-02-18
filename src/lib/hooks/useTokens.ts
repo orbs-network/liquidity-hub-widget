@@ -1,57 +1,82 @@
-import { useChainConfig } from "@orbs-network/liquidity-hub-lib";
 import { useQuery } from "@tanstack/react-query";
-import { useSharedContext } from "lib/context";
-import { useSwapStore } from "lib/store";
 import { tokensWithBalances } from "lib/util";
 import { useIsInvalidChain } from "./useIsInvalidChain";
-import { useWeb3 } from "./useWeb3";
 import BN from "bignumber.js";
 import _ from "lodash";
 import { eqIgnoreCase, zeroAddress } from "@defi.org/web3-candies";
-import { QUERY_KEYS } from "lib/consts";
+import { useChainConfig } from "./useChainConfig";
+import { useMainContext } from "lib/provider";
+import { QUERY_KEYS } from "lib/config/consts";
+import { useMemo } from "react";
 
-export const useTokens = () => {
-  const { account } = useSharedContext();
+const useTokensList = () => {
+  const { account, chainId } = useMainContext();
   const wrongChain = useIsInvalidChain();
-  const web3 = useWeb3();
-  const { updateStore, fromTokenAddress } = useSwapStore((s) => ({
-    updateStore: s.updateStore,
-    fromTokenAddress: s.fromTokenAddress,
-  }));
+  const web3 = useMainContext().web3;
   const chainConfig = useChainConfig();
 
   return useQuery({
     queryFn: async () => {
-      let tokens = await chainConfig!.getTokens();
-      tokens = await tokensWithBalances(tokens, web3, account);
-
-      let sorted = _.orderBy(
-        tokens,
-        (t) => {
-          return new BN(t.balance || "0");
-        },
-        ["desc"]
-      );
-
-      const isValidFromToken = _.find(sorted, (t) =>
-        eqIgnoreCase(t.address, fromTokenAddress || "")
-      );
-      if (!isValidFromToken) {
-        updateStore({ fromTokenAddress: sorted[1].address });
-      }
-      const nativeTokenIndex = _.findIndex(tokens, (t) =>
-        eqIgnoreCase(t.address, zeroAddress)
-      );
-
-      const nativeToken = tokens[nativeTokenIndex];
-      sorted = sorted.filter((t) => !eqIgnoreCase(t.address, zeroAddress));
-      sorted.unshift(nativeToken);
-
-      return sorted;
+      if (account && !web3) return [];
+      return chainConfig!.getTokens();
     },
-    queryKey: [QUERY_KEYS.GET_TOKENS, chainConfig?.chainId, account, web3?.version],
-    enabled: !!chainConfig && !!chainConfig && !wrongChain,
+    queryKey: [QUERY_KEYS.GET_TOKENS, chainId, account, web3?.version],
+    enabled: !!chainConfig && !wrongChain,
+    staleTime: Infinity,
+  });
+};
+
+export const useBalances = () => {
+  const { data: list } = useTokensList();
+  const { chainId, account, web3 } = useMainContext();
+  return useQuery({
+    queryKey: [QUERY_KEYS.BALANCES, chainId, account],
+    queryFn: async () => {
+      const res = await tokensWithBalances(list!, web3, account);
+      return _.mapValues(_.keyBy(res, "address"), "balance");
+    },
+    enabled: !!list && !!web3,
     refetchInterval: 60_000,
     staleTime: Infinity,
   });
+};
+
+export const useSortedTokens = () => {
+  const {
+    data: list,
+    isLoading,
+    dataUpdatedAt: listUpdatedAt,
+  } = useTokensList();
+  const { data: balances, dataUpdatedAt: balancesUpdatedAt } = useBalances();
+
+  const tokens = useMemo(() => {
+    let sorted = _.orderBy(
+      list,
+      (t) => {
+        return new BN(balances?.[t.address] || "0");
+      },
+      ["desc"]
+    );
+
+    const nativeTokenIndex = _.findIndex(sorted, (t) =>
+      eqIgnoreCase(t.address, zeroAddress)
+    );
+
+    const nativeToken = sorted[nativeTokenIndex];
+    sorted = sorted.filter((t) => !eqIgnoreCase(t.address, zeroAddress));
+    sorted.unshift(nativeToken);
+
+    return sorted;
+  }, [listUpdatedAt, balancesUpdatedAt]);
+
+  return {
+    sortedTokens: tokens,
+    isLoading,
+    dateUpdatedAt: balancesUpdatedAt,
+  };
+};
+
+export const useTokenBalance = (address?: string) => {
+  const { data: balances } = useBalances();
+  return !address ? "0" : balances?.[address] || "0";
 };

@@ -1,34 +1,24 @@
-import { useFormatNumber } from '@orbs-network/liquidity-hub-lib';
-import styled, { CSSProperties } from 'styled-components'
-import { useSwapStore } from '../store';
-import { SkeletonLoader } from './SkeletonLoader';
-import { Text } from './Text';
+import { useFormatNumber } from "lib/hooks/useFormatNumber";
+import styled, { CSSProperties } from "styled-components";
+import { SkeletonLoader } from "./SkeletonLoader";
+import { Text } from "./Text";
 
-interface Props{
-    value?: string;
-    className?: string;
-    css?: CSSProperties;
+interface Props {
+  value?: string;
+  className?: string;
+  css?: CSSProperties;
+  isLoading?: boolean;
 }
 
-
-export function Balance({ value, className = '', css = {} }: Props) {
-  const fetchingBalancesAfterTx = useSwapStore(
-    (s) => s.fetchingBalancesAfterTx
-  );
-    const balance = useFormatNumber({ value });
+export function Balance({ value, className = "", css = {}, isLoading }: Props) {
+  const balance = useFormatNumber({ value });
 
   return (
     <Container className={`clob-balance ${className}`} style={css}>
-      {fetchingBalancesAfterTx ? (
-        <SkeletonLoader  />
-      ) : (
-        <Text> {`Balance: ${balance}`}</Text>
-      )}
+      {isLoading ? <SkeletonLoader /> : <Text> {`Balance: ${balance}`}</Text>}
     </Container>
   );
 }
-
-
 
 const Container = styled.div`
   font-size: 14px;

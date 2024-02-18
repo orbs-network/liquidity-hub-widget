@@ -2,9 +2,9 @@
 import { useState } from "react";
 import styled from "styled-components";
 import { TokenSearchInput } from "./SearchInput";
-import { Modal } from "@orbs-network/liquidity-hub-lib";
 import _ from "lodash";
-import { TokenList } from "../TokenList";
+import { TokenList } from "./TokenList";
+import { Modal } from "../../Modal";
 
 export function TokenModal({
   open,

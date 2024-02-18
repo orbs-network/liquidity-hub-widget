@@ -1,4 +1,4 @@
-import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
+import { useFormatNumber } from "lib/hooks/useFormatNumber";
 import styled, { CSSProperties } from "styled-components";
 import { Text } from "./Text";
 interface Props {

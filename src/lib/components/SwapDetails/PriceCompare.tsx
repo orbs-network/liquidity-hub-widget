@@ -1,18 +1,21 @@
 
 import { useMemo, useState } from "react";
 import styled from "styled-components";
-import { useFromToken, useToToken, useUSDPriceQuery } from "../../hooks";
 import { Text } from "../Text";
-import { useFormatNumber } from "@orbs-network/liquidity-hub-lib";
 import { FlexRow } from "lib/base-styles";
+import { usePriceUsd } from "lib/hooks";
+import { useFormatNumber } from "lib/hooks/useFormatNumber";
+import { useWidgetStore } from "../widget/store";
 
 
 export const PriceCompare = () => {
   const [invert, setInvert] = useState(false);
-  const fromToken = useFromToken();
-  const toToken = useToToken();
-  const { data: fromTokenUsd } = useUSDPriceQuery(fromToken?.address);
-  const { data: toTokenUsd } = useUSDPriceQuery(toToken?.address);
+  const { fromToken, toToken } = useWidgetStore((s) => ({
+    fromToken: s.fromToken,
+    toToken: s.toToken,
+  }));
+  const { data: fromTokenUsd } = usePriceUsd({ address: fromToken?.address });
+  const { data: toTokenUsd } = usePriceUsd({ address: toToken?.address });
 
   const leftToken = invert ? toToken : fromToken;
   const rightToken = invert ? fromToken : toToken;
