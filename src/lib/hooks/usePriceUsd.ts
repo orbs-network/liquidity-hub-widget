@@ -1,8 +1,8 @@
 import { isNativeAddress } from "@defi.org/web3-candies";
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS } from "lib/config/consts";
-import { fetchPrice } from "lib/util";
-import { useChainConfig } from "./useChainConfig";
+import { fetchPrice } from "lib/utils";
+import { useChainConfig } from "@orbs-network/liquidity-hub-ui";
+import { QUERY_KEYS } from "lib/consts";
 
 export const usePriceUsd = ({
   address,

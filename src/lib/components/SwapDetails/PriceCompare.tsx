@@ -2,10 +2,10 @@
 import { useMemo, useState } from "react";
 import styled from "styled-components";
 import { Text } from "../Text";
-import { FlexRow } from "lib/base-styles";
 import { usePriceUsd } from "lib/hooks";
-import { useFormatNumber } from "lib/hooks/useFormatNumber";
-import { useWidgetStore } from "../widget/store";
+import { useWidgetStore } from "../../store";
+import { useFormatNumber } from "@orbs-network/liquidity-hub-ui";
+import { FlexRow } from "lib/base-styles";
 
 
 export const PriceCompare = () => {

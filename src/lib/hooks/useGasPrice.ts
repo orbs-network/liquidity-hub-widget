@@ -1,12 +1,12 @@
 import { estimateGasPrice } from "@defi.org/web3-candies";
+import { useChainId, useWeb3 } from "@orbs-network/liquidity-hub-ui";
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS } from "lib/config/consts";
-import { useMainContext } from "lib/provider";
 
 export const useGasPrice = () => {
-  const {chainId, web3} = useMainContext();
+  const chainId = useChainId();
+  const web3 = useWeb3();
   return useQuery({
-    queryKey: [QUERY_KEYS.GAS_PRICE, chainId],
+    queryKey: ["useGasPrice", chainId],
     queryFn: () => {
       return estimateGasPrice(undefined, undefined, web3);
     },

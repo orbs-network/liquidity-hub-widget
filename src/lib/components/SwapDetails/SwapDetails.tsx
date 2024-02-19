@@ -5,12 +5,11 @@ import { ReactNode, useMemo, useState } from "react";
 import BN from "bignumber.js";
 import { GasIcon } from "lib/assets/svg/gas";
 import { ChevronDown } from "react-feather";
-import { FlexRow, FlexColumn } from "lib/base-styles";
-import { useFormatNumber } from "lib/hooks/useFormatNumber";
 import { useTransactionEstimateGas } from "lib/hooks/useTransactionEstimateGas";
-import { DEFAULT_SLIPPAGE } from "lib/config/consts";
-import { useWidgetStore } from "../widget/store";
-import { useWidget } from "../widget/hooks";
+import { useWidgetStore } from "../../store";
+import { FlexColumn, FlexRow } from "lib/base-styles";
+import { useFormatNumber, useSlippage } from "@orbs-network/liquidity-hub-ui";
+import { useWidget } from "lib/hooks/useWidget";
 
 const StyledRowLabel = styled(Text)`
   font-size: 14px;
@@ -23,7 +22,6 @@ const StyledRowChildren = styled.div`
   * {
     font-size: inherit;
   }
-
 `;
 
 const TxGasCost = () => {
@@ -50,8 +48,8 @@ const StyledRow = styled(FlexRow)`
 
 const MinAmountOut = () => {
   const fromToken = useWidgetStore((s) => s.fromToken);
-  const toAmount = useWidget().quote?.outAmountUI
-  const slippage = DEFAULT_SLIPPAGE;
+  const toAmount = useWidget().quote?.outAmountUI;
+  const slippage = useSlippage();
   const symbol = fromToken?.symbol;
   const minAmountOut = useMemo(() => {
     if (!toAmount || !slippage) return "0";
@@ -79,11 +77,7 @@ const StyledDetails = styled(FlexColumn)`
   width: 100%;
 `;
 
-export function SwapDetails({
-  className,
-}: {
-  className?: string;
-}) {
+export function SwapDetails({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const fromAmount = useWidgetStore((s) => s.fromAmount);
   if (!fromAmount) return null;
@@ -129,12 +123,11 @@ const OpenBtn = ({ open, onClick }: { open: boolean; onClick: () => void }) => {
 };
 
 const StyledOpenButton = styled(FlexRow)`
-cursor: pointer;
-width: auto;
-min-width: 50px;
-justify-content: flex-end;
-`
-
+  cursor: pointer;
+  width: auto;
+  min-width: 50px;
+  justify-content: flex-end;
+`;
 
 const StyledArrow = styled(ChevronDown)<{ $transform: boolean }>`
   transition: 0.2s all;
@@ -150,5 +143,4 @@ const StyledSwapDetails = styled(FlexColumn)`
 
 const StyledGasPrice = styled(FlexRow)`
   gap: 5px;
-
 `;

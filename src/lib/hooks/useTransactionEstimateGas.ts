@@ -1,7 +1,6 @@
 import { zeroAddress } from "@defi.org/web3-candies";
-import { amountUi } from "lib/util";
+import { amountUi, useChainConfig } from "@orbs-network/liquidity-hub-ui";
 import { useMemo } from "react";
-import { useChainConfig } from "./useChainConfig";
 import { useGasPrice } from "./useGasPrice";
 import { usePriceUsd } from "./usePriceUsd";
 

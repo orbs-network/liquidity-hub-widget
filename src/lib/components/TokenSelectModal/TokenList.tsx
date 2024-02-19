@@ -4,21 +4,24 @@ import styled from "styled-components";
 import { eqIgnoreCase } from "@defi.org/web3-candies";
 import { useQuery } from "@tanstack/react-query";
 import _ from "lodash";
-import { FlexRow, FlexColumn } from "lib/base-styles";
 import { Token } from "lib/type";
-import { Logo } from "../../Logo";
+import { Logo } from "../Logo";
 import { StyledListToken } from "./styles";
-import { Text } from "../../Text";
-import { useUsdAmount } from "lib/hooks/useUsdAmount";
-import { useFormatNumber } from "lib/hooks/useFormatNumber";
-import { useContract } from "lib/hooks/useContract";
-import { useWidgetStore } from "../store";
-import { useSortedTokens, useTokenBalance } from "lib/hooks";
+import { Text } from "../Text";
+import { useWidgetStore } from "../../store";
+import { useSortedTokens, useTokenBalance, useUsdAmount } from "lib/hooks";
 import { useIsIntersacting } from "lib/hooks/useIsIntersacting";
-import { QUERY_KEYS } from "lib/config/consts";
+import { QUERY_KEYS } from "lib/consts";
+import {
+  useContractCallback,
+  useFormatNumber,
+} from "@orbs-network/liquidity-hub-ui";
+import { FlexColumn, FlexRow } from "lib/base-styles";
 
 const filterTokens = (list: Token[], filterValue: string) => {
   if (!filterValue) return list;
+
+    if(!list) return [];
 
   return list.filter((it) => {
     return (
@@ -34,7 +37,7 @@ const Row = ({
 }: {
   token: Token;
   onSelect: (token: Token) => void;
-}) => {
+}) => {  
   const { address } = token;
   const ref = useRef<any>();
   const isIntersacting = useIsIntersacting(ref);
@@ -115,15 +118,12 @@ const StyledUSD = styled(Text)`
 `;
 
 const useFilterTokens = (addressOrSymbol?: string) => {
-  const { sortedTokens = [], dateUpdatedAt } = useSortedTokens();
-
-  console.log({ dateUpdatedAt });
+  const { sortedTokens , dateUpdatedAt } = useSortedTokens();
   
-
-  const tokenContract = useContract(addressOrSymbol);
+  const getContract = useContractCallback();
 
   const filteredTokens = useMemo(() => {
-    const result = filterTokens(sortedTokens, addressOrSymbol || "");
+    const result = filterTokens(sortedTokens || [], addressOrSymbol || "");
     if (!addressOrSymbol) {
       return result;
     }
@@ -136,13 +136,14 @@ const useFilterTokens = (addressOrSymbol?: string) => {
   const query = useQuery<Token[]>({
     queryKey: [QUERY_KEYS.FILTER_TOKENS, addressOrSymbol],
     queryFn: async () => {
-      const result = filterTokens(sortedTokens, addressOrSymbol || "");
+      const result = filterTokens(sortedTokens || [], addressOrSymbol || "");
       if (!addressOrSymbol) {
         return result;
       }
       if (_.size(result)) {
         return result;
       }
+      const tokenContract = getContract(addressOrSymbol);
       if (!tokenContract) {
         return [];
       }
@@ -166,7 +167,10 @@ const useFilterTokens = (addressOrSymbol?: string) => {
     enabled: !filteredTokens && !!addressOrSymbol,
   });
 
-  return { filteredTokens: filteredTokens || query.data, isLoading: query.isLoading };
+  return {
+    filteredTokens: filteredTokens || query.data,
+    isLoading: query.isLoading,
+  };
 };
 
 export function TokenList({

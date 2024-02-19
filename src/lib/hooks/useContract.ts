@@ -1,5 +1,5 @@
+import { useContractCallback } from "@orbs-network/liquidity-hub-ui";
 import { useMemo } from "react";
-import { useContractCallback } from "./useContractCallback";
 
 export const useContract = (address?: string) => {
   const getContract = useContractCallback();

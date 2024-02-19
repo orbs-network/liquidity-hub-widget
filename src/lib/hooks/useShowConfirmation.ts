@@ -1,10 +1,8 @@
-import { getChainConfig, Token } from "lib";
-import { useIsInvalidChain } from "./useIsInvalidChain";
+import { Token } from "lib";
 import BN from "bignumber.js";
-import { useSwitchNetwork } from "./useSwitchNetwork";
 import { isNativeAddress } from "@defi.org/web3-candies";
-import { useMainContext } from "lib/provider";
 import { useTokenBalance } from "./useTokens";
+import { getChainConfig, useAccount, useIsInvalidChain, usePartnerChainId, useSwitchNetwork } from "@orbs-network/liquidity-hub-ui";
 
 export interface Props {
   fromToken?: Token;
@@ -28,7 +26,8 @@ export const useShowConfirmation = ({
   onConnect,
 }: Props) => {
   
-  const { account, partnerChainId } = useMainContext();
+  const partnerChainId = usePartnerChainId()
+  const account = useAccount();
   const { mutate: switchNetwork, isPending: switchNetworkLoading } =
     useSwitchNetwork();
   const wrongChain = useIsInvalidChain();

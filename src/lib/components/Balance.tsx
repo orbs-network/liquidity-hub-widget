@@ -1,4 +1,4 @@
-import { useFormatNumber } from "lib/hooks/useFormatNumber";
+import { useFormatNumber } from "@orbs-network/liquidity-hub-ui";
 import styled, { CSSProperties } from "styled-components";
 import { SkeletonLoader } from "./SkeletonLoader";
 import { Text } from "./Text";

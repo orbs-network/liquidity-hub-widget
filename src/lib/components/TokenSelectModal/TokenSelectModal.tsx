@@ -4,7 +4,7 @@ import styled from "styled-components";
 import { TokenSearchInput } from "./SearchInput";
 import _ from "lodash";
 import { TokenList } from "./TokenList";
-import { Modal } from "../../Modal";
+import { Modal } from "../Modal";
 
 export function TokenModal({
   open,

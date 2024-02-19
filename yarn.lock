@@ -1394,6 +1394,24 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.5.tgz#1eed23d4844c861a1835b5d33507c1017fa98de8"
   integrity sha512-ZK+W5mVhRppff9BE6YdR8CC52C8zAvsVAiWhEtQ5+oNxFE6h1WdeWo+FJSF8KKvtxxVYZ7MTP/5KoVpAU3aSWg==
 
+"@orbs-network/liquidity-hub-ui@^0.0.84":
+  version "0.0.84"
+  resolved "https://registry.yarnpkg.com/@orbs-network/liquidity-hub-ui/-/liquidity-hub-ui-0.0.84.tgz#81dea46be379927dfd2b863a9a13bb826555c152"
+  integrity sha512-uUlzMqtYzTlMUPSuO1rqgVLpR16TMX5o3+AcJ4+lEdTgDJkxkEmZeRmsL0Qdm1jCdy8L8IRRaNV8w735b/2Nvw==
+  dependencies:
+    "@defi.org/web3-candies" "^4.20.12"
+    "@tanstack/react-query" "^5.21.4"
+    axios "^1.6.3"
+    ethereum-multicall "^2.21.0"
+    lodash "^4.17.21"
+    react "^18.2.0"
+    react-dom "^18.2.0"
+    react-feather "^2.0.10"
+    react-number-format "^5.3.1"
+    reactjs-popup "^2.0.6"
+    styled-components "^6.1.8"
+    zustand "^4.5.1"
+
 "@parcel/watcher-android-arm64@2.4.0":
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@parcel/watcher-android-arm64/-/watcher-android-arm64-2.4.0.tgz#9c93763794153e4f76920994a423b6ea3257059d"

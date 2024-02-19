@@ -1,0 +1,4 @@
+export enum QUERY_KEYS  {
+  FILTER_TOKENS =  "FILTER_TOKENS",
+    USD_PRICE =  "USD_PRICE",
+};
