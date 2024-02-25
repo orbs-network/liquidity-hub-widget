@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/liquidity-hub-widget",
-  "version": "0.0.114",
+  "version": "0.0.115",
   "main": "./dist/main.umd.js",
   "module": "./dist/main.es.js",
   "types": "./dist/index.d.ts",
@@ -15,13 +15,13 @@
   ],
   "scripts": {
     "dev": "vite --force",
-    "build": "rm -rf dist && tsc && vite build",
+    "build": "rm -rf dist && tsc && vite build && cp -R dist ../../clob-integrations/orbs-spot-trading-integration/node_modules/@orbs-network/liquidity-hub-widget",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
     "@defi.org/web3-candies": "^4.20.12",
-    "@orbs-network/liquidity-hub-ui": "^0.0.207",
+    "@orbs-network/liquidity-hub-ui": "^0.0.208",
     "@tanstack/react-query": "^5.21.4",
     "axios": "^1.6.3",
     "ethereum-multicall": "^2.21.0",
