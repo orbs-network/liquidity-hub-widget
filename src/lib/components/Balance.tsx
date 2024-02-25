@@ -1,6 +1,5 @@
-import { useFormatNumber } from "@orbs-network/liquidity-hub-ui";
+import { SkeletonLoader, useFormatNumber } from "@orbs-network/liquidity-hub-ui";
 import styled, { CSSProperties } from "styled-components";
-import { SkeletonLoader } from "./SkeletonLoader";
 import { Text } from "./Text";
 
 interface Props {
@@ -14,7 +13,7 @@ export function Balance({ value, className = "", css = {}, isLoading }: Props) {
   const balance = useFormatNumber({ value });
 
   return (
-    <Container className={`clob-balance ${className}`} style={css}>
+    <Container className={`lh-balance ${className}`} style={css}>
       {isLoading ? <SkeletonLoader /> : <Text> {`Balance: ${balance}`}</Text>}
     </Container>
   );

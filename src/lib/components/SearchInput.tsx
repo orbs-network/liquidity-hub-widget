@@ -1,7 +1,7 @@
 import { useDebounce } from "lib/hooks/useDebounce";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { TextInput } from "../TextInput";
+import { TextInput } from "./TextInput";
 export const TokenSearchInput = ({
   setValue,
   className = ''
@@ -19,7 +19,7 @@ export const TokenSearchInput = ({
 
   return (
     <StyledSearchInput
-      className={className}
+      className={`${className} lh-token-select-modal-search`}
       placeholder="Search..."
       value={localValue}
       onChange={(e) => setLocalValue(e.target.value)}

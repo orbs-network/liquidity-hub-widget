@@ -3,14 +3,14 @@ import { useMemo, useState } from "react";
 import styled from "styled-components";
 import { Text } from "../Text";
 import { usePriceUsd } from "lib/hooks";
-import { useWidgetStore } from "../../store";
+import { useMainStore } from "../../store";
 import { useFormatNumber } from "@orbs-network/liquidity-hub-ui";
 import { FlexRow } from "lib/base-styles";
 
 
 export const PriceCompare = () => {
   const [invert, setInvert] = useState(false);
-  const { fromToken, toToken } = useWidgetStore((s) => ({
+  const { fromToken, toToken } = useMainStore((s) => ({
     fromToken: s.fromToken,
     toToken: s.toToken,
   }));

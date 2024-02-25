@@ -1,5 +1,18 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { TokenPanelProps } from "./type";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import {
+  TokenPanelProps,
+  WidgetConfig,
+  WidgetLayout,
+  GetPriceUSD,
+  ModalStyles,
+} from "./type";
 import {
   StyledChangeTokens,
   StyledContainer,
@@ -13,61 +26,89 @@ import {
 } from "./styles";
 import { ArrowDown } from "react-feather";
 import { Text } from "lib/components/Text";
-import { TokenModal } from "./components/TokenSelectModal/TokenSelectModal";
 import { Balance } from "lib/components/Balance";
 import { USD } from "lib/components/USD";
 import { Logo } from "lib/components/Logo";
 import { useUsdAmount } from "lib/hooks/useUsdAmount";
 import {
-  useBalances,
-  useShowConfirmation,
-  useSortedTokens,
-  useTokenBalance,
+  usePriceUsd,
+  useShowConfirmationButton,
+  useTokenListBalance,
+  useTokens,
 } from "lib/hooks";
 import styled, { CSSObject, ThemeProvider } from "styled-components";
 import { Spinner } from "./components/Spinner";
-import { useWidgetStore } from "./store";
 import {
-  LiquidityHubProvider,
   ProviderArgs,
-  SwapModal,
+  SwapConfirmation,
+  Token,
   useFormatNumber,
+  useSwapConfirmation,
   useWeb3,
+  PoweredByOrbs,
+  useAccount,
 } from "@orbs-network/liquidity-hub-ui";
-import { FlexRow } from "lib/base-styles";
-import { useWidget } from "./hooks/useWidget";
+import { FlexColumn, FlexRow } from "lib/base-styles";
 import { usePercentSelect } from "./hooks/usePercentSelect";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { theme } from "./theme";
 import { setWeb3Instance } from "@defi.org/web3-candies";
-
-
-const client = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
+import { useInitialTokens } from "./hooks/useInitialTokens";
+import { useResetOnChainChanged } from "./hooks/useResetOnChainChanged";
+import { Provider } from "./provider";
+import {
+  useToTokenPanel,
+  useFromTokenPanel,
+  useSwapTokens,
+} from "./hooks/swap";
+import { useRefreshBalancesAfterTx } from "./hooks/useRefreshBalancesAfterTx";
+import { TokenList } from "./components/TokenList";
+import { Modal } from "./components/Modal";
+import { Button } from "./components/Button";
+import { LoadingText } from "./components/LoadingText";
+import { TokenSearchInput } from "./components/SearchInput";
+import { useSwapButton } from "./hooks/useSwapButton";
+import { useMainStore } from "./store";
+import { useShallow } from "zustand/react/shallow";
 
 interface ContextProps {
   connectWallet?: () => void;
   styles?: CSSObject;
-  layout?: {
-    tokenPanel?: {
-      percentButtons?: { label: string; value: number }[];
-      headerOutside?: boolean;
-      inputSide?: "left" | "right";
-      usdSide?: "left" | "right";
-    };
-  };
+  layout?: WidgetLayout;
+  modal?: ModalStyles;
+  initialFromToken?: string;
+  initialToToken?: string;
 }
 
 const Context = createContext({} as ContextProps);
 
 const useWidgetContext = () => {
   return useContext(Context);
+};
+
+const WidgetModal = ({
+  children,
+  open,
+  onClose,
+  title,
+}: {
+  children: ReactNode;
+  open: boolean;
+  onClose: () => void;
+  title: string;
+}) => {
+  const modal = useWidgetContext().modal;
+
+  return (
+    <Modal
+      title={title}
+      containerStyles={modal?.containerStyles}
+      bodyStyles={modal?.bodyStyles}
+      open={open}
+      onClose={onClose}
+    >
+      {children}
+    </Modal>
+  );
 };
 
 const defaultPercentButtons = [
@@ -98,35 +139,58 @@ const PercentButtons = () => {
 const TokenSelect = ({
   symbol,
   logoUrl,
-  onClick,
+  onSelect,
 }: {
   symbol?: string;
   logoUrl?: string;
-  onClick: () => void;
+  onSelect: (token: Token) => void;
 }) => {
+  const [open, setOpen] = useState(false);
+  const [filterValue, setFilterValue] = useState("");
+  const tokens = useTokens(filterValue);
+
+  const onTokenSelect = (token: Token) => {
+    onSelect(token);
+    setOpen(false);
+  };
   return (
-    <StyledTokenSelect
-      $selected={!!symbol}
-      onClick={onClick}
-      className={`lh-token-select ${symbol ? "lh-token-select-selected" : ""}`}
-    >
-      {logoUrl && <Logo src={logoUrl} className="lh-token-logo" />}
-      <Text className="lh-token-symnol">{symbol || "Select token"}</Text>
-    </StyledTokenSelect>
+    <>
+      <StyledTokenSelect
+        $selected={!!symbol}
+        onClick={() => setOpen(true)}
+        className={`lh-token-select ${
+          symbol ? "lh-token-select-selected" : ""
+        }`}
+      >
+        {logoUrl && <Logo src={logoUrl} className="lh-token-logo" />}
+        <Text className="lh-token-symnol">{symbol || "Select token"}</Text>
+      </StyledTokenSelect>
+      <WidgetModal
+        title="Select token"
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        <TokenSearchInput value={filterValue} setValue={setFilterValue} />
+        <StyledTokenListContainer>
+          <TokenList
+            tokens={tokens}
+            onTokenSelect={onTokenSelect}
+            ListItem={TokenListItem}
+          />
+        </StyledTokenListContainer>
+      </WidgetModal>
+    </>
   );
 };
 
-interface WidgetProps extends ContextProps {}
-
-export function WidgetContent(props: WidgetProps) {
-  const web3 = useWeb3()
-
+export function WidgetContent(props: ContextProps) {
+  const web3 = useWeb3();
   useEffect(() => {
-   setWeb3Instance(web3);
+    setWeb3Instance(web3);
   }, [web3]);
-  
 
-  useInitialTokens();
+  useInitialTokens(props.initialFromToken, props.initialToToken);
+  useResetOnChainChanged();
 
   return (
     <Context.Provider value={props}>
@@ -137,61 +201,64 @@ export function WidgetContent(props: WidgetProps) {
         <StyledSwapDetails />
         <SwapSubmitButton />
         <SwapModal />
+        <StyledPoweredByOrbs />
       </Container>
     </Context.Provider>
   );
 }
 
-const useInitialTokens = () => {
-  const { updateStore, fromToken, toToken } = useWidgetStore((s) => ({
-    updateStore: s.updateStore,
-    fromToken: s.fromToken,
-    toToken: s.toToken,
-  }));
+const StyledPoweredByOrbs = styled(PoweredByOrbs)`
+  margin-top: 30px;
+`;
 
-  const { sortedTokens } = useSortedTokens();
+const SwapModal = () => {
+  const { showModal, closeModal, title } = useSwapConfirmation();
+  const onSuccess = useRefreshBalancesAfterTx();
+  const { swap, isPending, text, showButton } = useSwapButton();
 
-  useEffect(() => {
-    if (!sortedTokens) return;
+  const onClick = useCallback(() => {
+    swap(onSuccess);
+  }, [swap, onSuccess]);
 
-    if (!fromToken) {
-      updateStore({ fromToken: sortedTokens[1] });
-    }
-    if (!toToken) {
-      updateStore({ toToken: sortedTokens[2] });
-    }
-  }, [sortedTokens, fromToken, toToken]);
+  return (
+    <WidgetModal title={title} open={showModal} onClose={closeModal}>
+      <SwapConfirmation />
+      {showButton && (
+        <StyledSubmitButton onClick={onClick} isLoading={isPending}>
+          {text}
+        </StyledSubmitButton>
+      )}
+    </WidgetModal>
+  );
 };
 
 export const SwapSubmitButton = () => {
-  const { refetch: refetchBalances } = useBalances();
   const { connectWallet } = useWidgetContext();
-  const store = useWidgetStore();
-  const { quote, quoteError, confirmSwap, swapLoading, quoteLoading } =
-    useWidget();
+  const { fromToken, toToken } = useMainStore(
+    useShallow((s) => ({
+      fromToken: s.fromToken,
+      toToken: s.toToken,
+    }))
+  );
+  const fromTokenUsd = usePriceUsd({ address: fromToken?.address }).data;
+  const toTokenUsd = usePriceUsd({ address: toToken?.address }).data;
+  const { disabled, text, onClick, quoteLoading, switchNetworkLoading } =
+    useShowConfirmationButton(fromTokenUsd || '', toTokenUsd || '');
 
-  const { disabled, text, onClick, isLoading } = useShowConfirmation({
-    fromToken: store.fromToken,
-    toToken: store.toToken,
-    fromAmount: store.fromAmount,
-    toAmount: quote?.outAmountUI,
-    error: !!quoteError,
-    onClick: () =>
-      confirmSwap({
-        onSuccess: refetchBalances,
-      }),
-    isLoading: swapLoading || quoteLoading,
-    onConnect: connectWallet,
-  });
+  const account = useAccount();
+  const isLoading = quoteLoading || switchNetworkLoading;
+
+  const _onClick = !account ? connectWallet : onClick;
+  const _text = !account ? "Connect Wallet" : text;
 
   return (
     <StyledSubmitButton
       className={`lh-swap-button`}
       $disabled={disabled}
       disabled={disabled}
-      onClick={onClick ? () => onClick() : () => {}}
+      onClick={() => _onClick?.()}
     >
-      <p style={{ opacity: isLoading ? 0 : 1 }}>{text}</p>
+      <p style={{ opacity: isLoading ? 0 : 1 }}>{_text}</p>
       {isLoading ? (
         <SpinnerContainer>
           <Spinner />
@@ -208,7 +275,7 @@ const SpinnerContainer = styled.div`
   transform: translate(-50%, -50%);
 `;
 
-const StyledSubmitButton = styled.button<{ $disabled?: boolean }>`
+const StyledSubmitButton = styled(Button)<{ $disabled?: boolean }>`
   pointer-events: ${({ $disabled }) => ($disabled ? "none" : "unset")};
   font-size: 16px;
   width: 100%;
@@ -232,11 +299,10 @@ const Container = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ChangeTokens = () => {
-  const onSwitchTokens = useWidgetStore((store) => store.onSwitchTokens);
-
+  const swapTokens = useSwapTokens();
   return (
     <StyledChangeTokens className="lh-switch-tokens">
-      <button onClick={onSwitchTokens}>
+      <button onClick={swapTokens}>
         <ArrowDown />
       </button>
     </StyledChangeTokens>
@@ -244,13 +310,11 @@ const ChangeTokens = () => {
 };
 
 const FromTokenPanel = () => {
-  const { token, amount, onChange } = useWidgetStore((s) => ({
-    token: s.fromToken,
-    amount: s.fromAmount,
-    onChange: s.onFromAmountChange,
-  }));
+  const { token, amount, onChange, onTokenSelect } = useFromTokenPanel();
 
-  const usd = useUsdAmount({ address: token?.address, amount });
+  const usd = useFormatNumber({
+    value: useUsdAmount({ address: token?.address, amount }),
+  });
 
   return (
     <TokenPanel
@@ -260,24 +324,22 @@ const FromTokenPanel = () => {
       onInputChange={onChange}
       label="From"
       isSrc={true}
+      onTokenSelect={onTokenSelect}
     />
   );
 };
 
 const ToTokenPanel = () => {
-  const { token } = useWidgetStore((s) => ({
-    token: s.toToken,
-  }));
-
-  const amount = useWidget().quote?.outAmountUI;
-  const usd = useUsdAmount({ address: token?.address, amount });
-  const inputValue = useFormatNumber({ value: amount });
-
+  const { token, amount, onTokenSelect } = useToTokenPanel();
+  const usd = useFormatNumber({
+    value: useUsdAmount({ address: token?.address, amount }),
+  });
   return (
     <TokenPanel
+      onTokenSelect={onTokenSelect}
       token={token}
       usd={usd}
-      inputValue={inputValue || ""}
+      inputValue={amount || ""}
       label="To"
     />
   );
@@ -304,74 +366,175 @@ const TokenPanel = ({
   token,
   label,
   isSrc,
+  onTokenSelect,
 }: TokenPanelProps) => {
-  const [open, setOpen] = useState(false);
-  const tokenPanelLayout = useWidgetContext().layout?.tokenPanel;
+  const context = useWidgetContext();
+  const tokenPanelLayout = context.layout?.tokenPanel;
   const usd = useUsdAmount({ address: token?.address, amount: inputValue });
   const headerOutside = tokenPanelLayout?.headerOutside;
   const inputLeft = tokenPanelLayout?.inputSide === "left";
   const usdLeft = tokenPanelLayout?.usdSide === "left";
-
-  const balance = useFormatNumber({ value: useTokenBalance(token?.address) });
+  const balance = useFormatNumber({
+    value: useTokenListBalance(token?.address),
+  });
 
   const header = <TokenPanelHeader isSrc={isSrc} label={label} />;
 
   return (
-    <>
-      <StyledTokenPanel
-        $inputLeft={inputLeft}
-        $usdLeft={usdLeft}
-        className="lh-token-panel-container"
-      >
-        {headerOutside && header}
-        <StyledTokenPanelContent className="lh-token-panel-container-content">
-          {!headerOutside && header}
-          <FlexRow style={{ width: "100%", gap: 12 }}>
-            <>
-              <StyledInput
-                onChange={onInputChange}
-                value={inputValue}
-                placeholder="0.00"
-                $alignLeft={inputLeft}
-                disabled={!isSrc}
-              />
-              <TokenSelect
-                symbol={token?.symbol}
-                logoUrl={token?.logoUrl}
-                onClick={() => setOpen(true)}
-              />
-            </>
-          </FlexRow>
-          <FlexRow
-            style={{
-              justifyContent: "space-between",
-              width: "100%",
-            }}
-          >
-            <Balance value={balance} />
-            <USD value={usd} />
-          </FlexRow>
-        </StyledTokenPanelContent>
-      </StyledTokenPanel>
-      <TokenModal
-        isFromToken={isSrc}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
-    </>
+    <StyledTokenPanel
+      $inputLeft={inputLeft}
+      $usdLeft={usdLeft}
+      className="lh-token-panel-container"
+    >
+      {headerOutside && header}
+      <StyledTokenPanelContent className="lh-token-panel-container-content">
+        {!headerOutside && header}
+        <FlexRow style={{ width: "100%", gap: 12 }}>
+          <>
+            <StyledInput
+              onChange={onInputChange}
+              value={inputValue}
+              placeholder="0.00"
+              $alignLeft={inputLeft}
+              disabled={!isSrc}
+            />
+            <TokenSelect
+              symbol={token?.symbol}
+              logoUrl={token?.logoUrl}
+              onSelect={onTokenSelect}
+            />
+          </>
+        </FlexRow>
+        <FlexRow
+          style={{
+            justifyContent: "space-between",
+            width: "100%",
+          }}
+        >
+          <Balance value={balance} />
+          <USD value={usd} />
+        </FlexRow>
+      </StyledTokenPanelContent>
+    </StyledTokenPanel>
   );
 };
 
-export interface Props extends ProviderArgs, ContextProps {}
+export interface Props extends ProviderArgs {
+  connectWallet?: () => void;
+  config?: WidgetConfig;
+  getPriceUsd?: GetPriceUSD;
+  initialFromToken?: string;
+  initialToToken?: string;
+}
 
-export const Widget = (props: Props) => {  
+export const Widget = (props: Props) => {
   return (
-    <LiquidityHubProvider {...props}>
-      <QueryClientProvider client={client}>
-        <ThemeProvider theme={theme}>
-          <WidgetContent connectWallet={props.connectWallet} styles={props.styles} layout={props.layout} />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </LiquidityHubProvider>
+    <Provider {...props}>
+      <ThemeProvider theme={theme}>
+        <WidgetContent
+          connectWallet={props.connectWallet}
+          styles={props.config?.styles}
+          layout={props.config?.layout}
+          modal={props.config?.modalStyles}
+          initialFromToken={props.initialFromToken}
+          initialToToken={props.initialToToken}
+        />
+      </ThemeProvider>
+    </Provider>
   );
 };
+
+export const TokenListItem = ({
+  token,
+  disabled,
+}: {
+  token: Token;
+  disabled?: boolean;
+}) => {
+  const _balance = useTokenListBalance(token.address);
+  const _usd = useUsdAmount({
+    address: token.address,
+    amount: _balance,
+  });
+
+  const balance = useFormatNumber({ value: _balance });
+  const usd = useFormatNumber({ value: _usd });
+
+  return (
+    <StyledListToken $disabled={disabled}>
+      <FlexRow
+        style={{
+          width: "unset",
+          flex: 1,
+          justifyContent: "flex-start",
+          gap: 10,
+        }}
+      >
+        <Logo
+          className="logo"
+          src={token.logoUrl}
+          alt={token.symbol}
+          imgStyle={{
+            width: 30,
+            height: 30,
+          }}
+        />
+        <FlexColumn style={{ alignItems: "flex-start" }}>
+          <Text className="symbol">{token.symbol}</Text>
+          {token.name && (
+            <StyledTokenName className="name">{token.name}</StyledTokenName>
+          )}
+        </FlexColumn>
+      </FlexRow>
+      <FlexColumn
+        style={{
+          justifyContent: "flex-end",
+          alignItems: "flex-end",
+        }}
+      >
+        <StyledBalance isLoading={!balance} value={balance} />
+        {usd && <StyledUSD value={`$ ${usd}`} />}
+      </FlexColumn>
+    </StyledListToken>
+  );
+};
+
+const StyledTokenName = styled(Text)`
+  font-size: 12px;
+  opacity: 0.8;
+`;
+
+const StyledBalance = styled(LoadingText)`
+  font-size: 14px;
+`;
+
+const StyledUSD = styled(LoadingText)`
+  font-size: 12px;
+  opacity: 0.8;
+`;
+
+export const StyledListToken = styled.div<{ $disabled?: boolean }>(
+  ({ $disabled }) => ({
+    cursor: "pointer",
+    display: "flex",
+    gap: 10,
+    height: "100%",
+    alignItems: "center",
+    padding: "0px 20px",
+    transition: "0.2s all",
+    width: "100%",
+    opacity: $disabled ? 0.5 : 1,
+    pointerEvents: $disabled ? "none" : "all",
+    "&:hover": {
+      background: "rgba(255,255,255, 0.07)",
+    },
+  })
+);
+
+const StyledTokenListContainer = styled.div`
+  max-height: 90vh;
+  height: 700px;
+  width: 100%;
+  color: white;
+  overflow-y: auto;
+`;

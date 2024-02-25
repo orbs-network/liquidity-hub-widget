@@ -14,7 +14,7 @@ export const useUsdAmount = ({
   const { data: usd } = usePriceUsd({ address, disabled });
 
   return useMemo(() => {
-    if (!amount || !usd) return "";
+    if (!amount || !usd) return undefined;
     return BN(amount).multipliedBy(usd).toString();
   }, [amount, usd]);
 };

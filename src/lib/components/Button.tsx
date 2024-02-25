@@ -5,17 +5,18 @@ export function Button({
   children,
   className = "className",
   onClick,
-  isLoading
+  isLoading,
+  disabled,
 }: {
   children: ReactNode;
   className?: string;
   onClick: () => void;
-    isLoading?: boolean;
+  isLoading?: boolean;
+  disabled?: boolean;
 }) {
-
   return (
     <Container
-      // $bg={uiSettings?.buttonColor}
+      disabled={disabled}
       onClick={onClick}
       className={className}
     >

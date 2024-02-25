@@ -35,8 +35,8 @@ export function NumericInput({
   const inputValue = value || minAmount || '';
 
   return (
-    <StyledContainer className={`clob-input ${className}`}>
-      {loading && <StyledLoader className="clob-input-loader" />}
+    <StyledContainer className={`lh-input ${className}`}>
+      {loading && <StyledLoader className="lh-input-loader" />}
 
       <FlexRow
         style={{

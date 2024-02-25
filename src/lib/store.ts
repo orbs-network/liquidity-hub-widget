@@ -1,4 +1,4 @@
-import { Token } from "lib/type";
+import { Token } from "@orbs-network/liquidity-hub-ui";
 import { create } from "zustand";
 
 interface WidgetStore {
@@ -24,7 +24,7 @@ const initialState: Partial<WidgetStore> = {
   fetchingBalancesAfterTx: false,
 };
 
-export const useWidgetStore = create<WidgetStore>((set) => ({
+export const useMainStore = create<WidgetStore>((set) => ({
   ...initialState,
   updateStore: (value) => set({ ...value }),
   onFromAmountChange: (value) => set({ fromAmount: value }),

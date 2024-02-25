@@ -26,11 +26,21 @@ function Wrapped() {
       partner="playground"
       account={address}
       partnerChainId={supportedChainsConfig.polygon.chainId}
+      initialFromToken="USDC"
+      initialToToken="USDT"
+      config={{
+        modalStyles: {
+          containerStyles: {
+            maxWidth: "500px",
+            background: "black",
+          },
+        },
+      }}
     />
   );
 }
 
- const Dapp = () => {
+const Dapp = () => {
   return (
     <RainbowProvider>
       <Container>

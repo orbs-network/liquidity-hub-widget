@@ -88,10 +88,9 @@ export const StyledTokenSelect = styled(FlexRow)<{
   ${({ $style }) => $style}
 `;
 
-export const StyledTop = styled(FlexRow)<{ $style?: CSSObject }>`
+export const StyledTop = styled(FlexRow)`
   width: 100%;
   justify-content: space-between;
-  ${({ $style }) => $style}
 `;
 
 const Card = styled(FlexColumn)`
@@ -111,19 +110,19 @@ export const StyledTokenPanel = styled(FlexColumn)<{
   $usdLeft: boolean;
 }>`
   width: 100%;
-  .clob-input {
+  .lh-input {
     order: ${({ $inputLeft }) => ($inputLeft ? 1 : 2)};
     input {
       text-align: ${({ $inputLeft }) => ($inputLeft ? "left" : "right")};
     }
   }
-  .clob-token-panel-select {
+  .lh-token-select {
     order: ${({ $inputLeft }) => ($inputLeft ? 2 : 1)};
   }
-  .clob-usd {
+  .lh-usd {
     order: ${({ $usdLeft }) => ($usdLeft ? 1 : 2)};
   }
-  .clob-balance {
+  .lh-balance {
     order: ${({ $usdLeft }) => ($usdLeft ? 2 : 1)};
   }
 `;

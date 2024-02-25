@@ -1,15 +1,11 @@
 import axios from "axios";
 import BN from "bignumber.js";
-import { isNativeAddress, erc20abi, zeroAddress } from "@defi.org/web3-candies";
+import { isNativeAddress, erc20abi } from "@defi.org/web3-candies";
 import Web3 from "web3";
-import { Token } from "./type";
-import {
-  ContractCallContext,
-  ContractCallResults,
-  Multicall,
-} from "ethereum-multicall";
+import { ContractCallContext, Multicall } from "ethereum-multicall";
 import _ from "lodash";
-import { amountUi } from "@orbs-network/liquidity-hub-ui";
+import { amountUi, Token } from "@orbs-network/liquidity-hub-ui";
+import { Balances } from "./type";
 
 export async function fetchPriceParaswap(
   chainId: number,
@@ -51,13 +47,13 @@ export async function fetchPrice(
   }
 }
 
-export const tokensWithBalances = async (
+export const getBalances = async (
   tokens: Token[],
   web3?: Web3,
   account?: string
-): Promise<Token[]> => {
+): Promise<Balances> => {
   if (!web3 || !account) {
-    return tokens;
+    return {};
   }
   const native = tokens.find((it) => isNativeAddress(it.address));
   const erc20Tokens = tokens.filter((it) => !isNativeAddress(it.address));
@@ -82,20 +78,15 @@ export const tokensWithBalances = async (
 
   const multicall = new Multicall({ web3Instance: web3, tryAggregate: true });
 
-  const results: ContractCallResults = await multicall.call(
-    contractCallContext
-  );
+  const [nativeBalance, results] = await Promise.all([
+    web3.eth.getBalance(account),
+    multicall.call(contractCallContext),
+  ]);
 
   const balances: { [key: string]: string } = {};
 
   if (native) {
-    let nativeBalance = "0";
-    try {
-      nativeBalance = await web3.eth.getBalance(account);
-    } catch (error) {
-      console.log(error);
-    }
-    balances[zeroAddress] = amountUi(native.decimals, new BN(nativeBalance));
+    balances[native.address] = amountUi(native.decimals, new BN(nativeBalance));
   }
 
   try {
@@ -111,12 +102,15 @@ export const tokensWithBalances = async (
   } catch (error) {
     console.log(error);
   }
-  return tokens.map((token) => {
+
+  const res = tokens.map((token) => {
     return {
-      ...token,
+      address: token.address,
       balance: balances[token.address] || "0",
     };
   });
+
+  return _.mapValues(_.keyBy(res, "address"), "balance");
 };
 
 export function delay(ms: number) {

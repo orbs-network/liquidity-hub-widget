@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, {CSSObject} from 'styled-components';
 
 export const FlexRow = styled.div<{
   $gap?: number;
@@ -11,9 +11,14 @@ export const FlexRow = styled.div<{
   gap: ${({ $gap }) => $gap || 10}px;
   justify-content: ${({ $justifyContent }) => $justifyContent || "center"};
 `;
-export const FlexColumn = styled.div<{ $gap?: number; $alignItems?: string }>`
+export const FlexColumn = styled.div<{
+  $gap?: number;
+  $alignItems?: string;
+  $style?: CSSObject;
+}>`
   display: flex;
   flex-direction: column;
   align-items: ${({ $alignItems }) => $alignItems || "flex-start"};
   gap: ${({ $gap }) => $gap || 10}px;
+  ${({ $style }) => $style}
 `;

@@ -5,11 +5,14 @@ import { ReactNode, useMemo, useState } from "react";
 import BN from "bignumber.js";
 import { GasIcon } from "lib/assets/svg/gas";
 import { ChevronDown } from "react-feather";
-import { useTransactionEstimateGas } from "lib/hooks/useTransactionEstimateGas";
-import { useWidgetStore } from "../../store";
+import { useMainStore } from "../../store";
 import { FlexColumn, FlexRow } from "lib/base-styles";
-import { useFormatNumber, useSlippage } from "@orbs-network/liquidity-hub-ui";
-import { useWidget } from "lib/hooks/useWidget";
+import {
+  useFormatNumber,
+  useSlippage,
+  useTransactionEstimateGasPrice,
+} from "@orbs-network/liquidity-hub-ui";
+import { useLiquidityHubData } from "lib/hooks/swap/useLiquidityHubData";
 
 const StyledRowLabel = styled(Text)`
   font-size: 14px;
@@ -47,9 +50,10 @@ const StyledRow = styled(FlexRow)`
 `;
 
 const MinAmountOut = () => {
-  const fromToken = useWidgetStore((s) => s.fromToken);
-  const toAmount = useWidget().quote?.outAmountUI;
+  const fromToken = useMainStore((s) => s.fromToken);
+  const toAmount = useLiquidityHubData().quote?.outAmountUI;
   const slippage = useSlippage();
+
   const symbol = fromToken?.symbol;
   const minAmountOut = useMemo(() => {
     if (!toAmount || !slippage) return "0";
@@ -79,7 +83,7 @@ const StyledDetails = styled(FlexColumn)`
 
 export function SwapDetails({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
-  const fromAmount = useWidgetStore((s) => s.fromAmount);
+  const fromAmount = useMainStore((s) => s.fromAmount);
   if (!fromAmount) return null;
   return (
     <StyledSwapDetails className={className}>
@@ -102,7 +106,7 @@ const StyledTop = styled(FlexRow)`
 `;
 
 const GasPrice = () => {
-  const txGasPrice = useTransactionEstimateGas();
+  const txGasPrice = useTransactionEstimateGasPrice();
   const _txGasPrice = useFormatNumber({ value: txGasPrice, decimalScale: 1 });
 
   return (
