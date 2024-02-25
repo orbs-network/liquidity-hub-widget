@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/liquidity-hub-widget",
-  "version": "0.0.117",
+  "version": "0.0.118",
   "main": "./dist/main.umd.js",
   "module": "./dist/main.es.js",
   "types": "./dist/index.d.ts",
@@ -30,6 +30,8 @@
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
     "react-number-format": "^5.3.1",
+    "react-virtualized-auto-sizer": "^1.0.23",
+    "react-window": "^1.8.10",
     "reactjs-popup": "^2.0.6",
     "styled-components": "^6.1.8",
     "zustand": "^4.5.1"
