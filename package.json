@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/liquidity-hub-widget",
-  "version": "0.0.207",
+  "version": "0.0.208",
   "main": "./dist/main.umd.js",
   "module": "./dist/main.es.js",
   "types": "./dist/index.d.ts",
@@ -20,7 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@orbs-network/liquidity-hub-ui": "^0.0.218",
+    "@orbs-network/liquidity-hub-ui": "^0.0.219",
     "axios": "^1.6.3",
     "ethereum-multicall": "^2.21.0",
     "react": "^18.2.0",
