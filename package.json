@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/liquidity-hub-widget",
-  "version": "0.0.221",
+  "version": "0.0.222",
   "main": "./dist/main.umd.js",
   "module": "./dist/main.es.js",
   "types": "./dist/index.d.ts",
