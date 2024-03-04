@@ -2,19 +2,13 @@ import { useMemo } from "react";
 import { usePriceUsd } from "./usePriceUsd";
 import BN from "bignumber.js";
 
-export const useUsdAmount = ({
-  address,
-  amount,
-  disabled,
-}: {
-  address?: string;
-  amount?: string;
-  disabled?: boolean;
-}) => {
-  const { data: usd } = usePriceUsd({ address, disabled });
+export const useUsdAmount = (address?: string, amount?: string) => {
+  const { data: usd, isLoading } = usePriceUsd({ address });
 
-  return useMemo(() => {
+  const result = useMemo(() => {
     if (!amount || !usd) return undefined;
     return BN(amount).multipliedBy(usd).toString();
   }, [amount, usd]);
+
+  return { usd: result, isLoading };
 };

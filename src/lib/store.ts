@@ -7,6 +7,7 @@ interface WidgetStore {
   fromAmount?: string;
   toAmount?: string;
   fetchingBalancesAfterTx?: boolean;
+
   updateStore: (value: Partial<WidgetStore>) => void;
   onFromAmountChange: (value: string) => void;
   onToAmountChange: (value: string) => void;

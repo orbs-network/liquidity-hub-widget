@@ -2,42 +2,36 @@ import { Token, useAccount, useWeb3 } from "@orbs-network/liquidity-hub-ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { delay, getBalances } from "lib/utils";
 import { useCallback } from "react";
-import { useQueryKeys } from "./useQueryKeys";
 import Web3 from "web3";
 import { Balances } from "lib/type";
 import { useMainStore } from "lib/store";
 import { useShallow } from "zustand/react/shallow";
+import { useTokenListBalances } from "./useTokenListBalances";
 export function useRefreshBalancesAfterTx() {
   const web3 = useWeb3();
   const account = useAccount();
   const queryClient = useQueryClient();
-  const queryKey = useQueryKeys().balances;
-  const { fromToken, toToken } = useMainStore(
+  const { data: balances, refetch } = useTokenListBalances();
+  const { fromToken, toToken, updateStore } = useMainStore(
     useShallow((s) => ({
       fromToken: s.fromToken,
       toToken: s.toToken,
+      updateStore: s.updateStore,
     }))
   );
 
   return useCallback(async () => {
-    if (!account || !web3 || !fromToken || !toToken) return;
-    const currentBalances =
-      (queryClient.getQueryData(queryKey) as Balances) || {};
-    const result = loopBalances(
-      web3,
-      account,
-      fromToken,
-      toToken,
-      currentBalances
-    );
-    if (!result) return;
-    queryClient.setQueryData(queryKey, (prevData: Balances = {}) => {
-      return {
-        ...prevData,
-        ...result,
-      };
-    });
-  }, [account, web3, queryKey, fromToken, toToken, queryClient]);
+    if (!account || !web3 || !fromToken || !toToken || !balances) return;
+    updateStore({ fetchingBalancesAfterTx: true });
+    try {
+      await loopBalances(web3, account, fromToken, toToken, balances);
+      await refetch();
+    } catch (error) {
+      console.error("useRefreshBalancesAfterTx", error);
+    } finally {
+      updateStore({ fetchingBalancesAfterTx: false });
+    }
+  }, [account, web3, balances, fromToken, toToken, queryClient, updateStore]);
 }
 
 const loopBalances = async (
@@ -48,8 +42,6 @@ const loopBalances = async (
   currentBalances: Balances
 ) => {
   const newBalances = await getBalances([fromToken, toToken], web3, account);
-  console.log("newBalances", newBalances);
-
   if (
     currentBalances[fromToken.address] !== newBalances[fromToken.address] &&
     currentBalances[toToken.address] !== newBalances[toToken.address]

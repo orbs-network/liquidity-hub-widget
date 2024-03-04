@@ -1,11 +1,10 @@
 import BN from "bignumber.js";
 import _ from "lodash";
-import { eqIgnoreCase, zeroAddress } from "@defi.org/web3-candies";
 import { useTokensList } from "./useTokenList";
-import { useTokenListBalances } from "./useTokenListBalances";
 import { useMemo } from "react";
-import { Token } from "@orbs-network/liquidity-hub-ui";
+import { eqIgnoreCase, Token, zeroAddress } from "@orbs-network/liquidity-hub-ui";
 import { useDebounce } from "./useDebounce";
+import { useTokenListBalances } from "./useTokenListBalances";
 
 const filterTokens = (list?: Token[], filterValue?: string) => {
   if (!filterValue) return list;

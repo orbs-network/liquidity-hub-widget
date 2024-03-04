@@ -3,15 +3,14 @@ import {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from "react";
 import {
   TokenPanelProps,
   WidgetConfig,
   WidgetLayout,
-  GetPriceUSD,
   ModalStyles,
+  TokenListItemProps,
 } from "./type";
 import {
   StyledChangeTokens,
@@ -26,8 +25,6 @@ import {
 } from "./styles";
 import { ArrowDown } from "react-feather";
 import { Text } from "lib/components/Text";
-import { Balance } from "lib/components/Balance";
-import { USD } from "lib/components/USD";
 import { Logo } from "lib/components/Logo";
 import { useUsdAmount } from "lib/hooks/useUsdAmount";
 import {
@@ -44,22 +41,14 @@ import {
   Token,
   useFormatNumber,
   useSwapConfirmation,
-  useWeb3,
   PoweredByOrbs,
   useAccount,
 } from "@orbs-network/liquidity-hub-ui";
 import { FlexColumn, FlexRow } from "lib/base-styles";
 import { usePercentSelect } from "./hooks/usePercentSelect";
 import { theme } from "./theme";
-import { setWeb3Instance } from "@defi.org/web3-candies";
-import { useInitialTokens } from "./hooks/useInitialTokens";
 import { useResetOnChainChanged } from "./hooks/useResetOnChainChanged";
 import { Provider } from "./provider";
-import {
-  useToTokenPanel,
-  useFromTokenPanel,
-  useSwapTokens,
-} from "./hooks/swap";
 import { useRefreshBalancesAfterTx } from "./hooks/useRefreshBalancesAfterTx";
 import { TokenList } from "./components/TokenList";
 import { Modal } from "./components/Modal";
@@ -69,14 +58,13 @@ import { TokenSearchInput } from "./components/SearchInput";
 import { useSwapButton } from "./hooks/useSwapButton";
 import { useMainStore } from "./store";
 import { useShallow } from "zustand/react/shallow";
+import { useLiquidityHubData } from "./hooks/useLiquidityHubData";
 
 interface ContextProps {
   connectWallet?: () => void;
   styles?: CSSObject;
   layout?: WidgetLayout;
   modal?: ModalStyles;
-  initialFromToken?: string;
-  initialToToken?: string;
 }
 
 const Context = createContext({} as ContextProps);
@@ -184,12 +172,6 @@ const TokenSelect = ({
 };
 
 export function WidgetContent(props: ContextProps) {
-  const web3 = useWeb3();
-  useEffect(() => {
-    setWeb3Instance(web3);
-  }, [web3]);
-
-  useInitialTokens(props.initialFromToken, props.initialToToken);
   useResetOnChainChanged();
 
   return (
@@ -212,7 +194,7 @@ const StyledPoweredByOrbs = styled(PoweredByOrbs)`
 `;
 
 const SwapModal = () => {
-  const { showModal, closeModal, title } = useSwapConfirmation();
+  const { showModal, closeModal, swapStatus } = useSwapConfirmation();
   const onSuccess = useRefreshBalancesAfterTx();
   const { swap, isPending, text, showButton } = useSwapButton();
 
@@ -221,7 +203,7 @@ const SwapModal = () => {
   }, [swap, onSuccess]);
 
   return (
-    <WidgetModal title={title} open={showModal} onClose={closeModal}>
+    <WidgetModal title={!swapStatus ? 'Review swap' : ''} open={showModal} onClose={closeModal}>
       <SwapConfirmation />
       {showButton && (
         <StyledSubmitButton onClick={onClick} isLoading={isPending}>
@@ -242,11 +224,12 @@ export const SwapSubmitButton = () => {
   );
   const fromTokenUsd = usePriceUsd({ address: fromToken?.address }).data;
   const toTokenUsd = usePriceUsd({ address: toToken?.address }).data;
-  const { disabled, text, onClick, quoteLoading, switchNetworkLoading } =
-    useShowConfirmationButton(fromTokenUsd || '', toTokenUsd || '');
+  const { disabled, text, onClick, isLoading } = useShowConfirmationButton(
+    fromTokenUsd || "",
+    toTokenUsd || ""
+  );
 
   const account = useAccount();
-  const isLoading = quoteLoading || switchNetworkLoading;
 
   const _onClick = !account ? connectWallet : onClick;
   const _text = !account ? "Connect Wallet" : text;
@@ -299,7 +282,7 @@ const Container = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ChangeTokens = () => {
-  const swapTokens = useSwapTokens();
+  const swapTokens = useMainStore(s => s.onSwitchTokens);
   return (
     <StyledChangeTokens className="lh-switch-tokens">
       <button onClick={swapTokens}>
@@ -310,16 +293,16 @@ const ChangeTokens = () => {
 };
 
 const FromTokenPanel = () => {
-  const { token, amount, onChange, onTokenSelect } = useFromTokenPanel();
-
-  const usd = useFormatNumber({
-    value: useUsdAmount({ address: token?.address, amount }),
-  });
+  const { token, amount, onChange, onTokenSelect } = useMainStore(useShallow(s => ({
+    token: s.fromToken,
+    amount: s.fromAmount,
+    onChange: s.onFromAmountChange,
+    onTokenSelect: s.onFromTokenChange,
+  })));
 
   return (
     <TokenPanel
       token={token}
-      usd={usd}
       inputValue={amount || ""}
       onInputChange={onChange}
       label="From"
@@ -330,15 +313,19 @@ const FromTokenPanel = () => {
 };
 
 const ToTokenPanel = () => {
-  const { token, amount, onTokenSelect } = useToTokenPanel();
-  const usd = useFormatNumber({
-    value: useUsdAmount({ address: token?.address, amount }),
-  });
+  const { token, onTokenSelect } = useMainStore(
+    useShallow((s) => ({
+      token: s.toToken,
+      onTokenSelect: s.onToTokenChange,
+    }))
+  );
+
+  const amount = useLiquidityHubData().quote?.outAmountUI
+
   return (
     <TokenPanel
       onTokenSelect={onTokenSelect}
       token={token}
-      usd={usd}
       inputValue={amount || ""}
       label="To"
     />
@@ -370,13 +357,20 @@ const TokenPanel = ({
 }: TokenPanelProps) => {
   const context = useWidgetContext();
   const tokenPanelLayout = context.layout?.tokenPanel;
-  const usd = useUsdAmount({ address: token?.address, amount: inputValue });
+  const { usd: _usd, isLoading: usdLoading } = useUsdAmount(
+    token?.address,
+    inputValue
+  );
+
   const headerOutside = tokenPanelLayout?.headerOutside;
   const inputLeft = tokenPanelLayout?.inputSide === "left";
   const usdLeft = tokenPanelLayout?.usdSide === "left";
+  const _balance = useTokenListBalance(token?.address);
   const balance = useFormatNumber({
-    value: useTokenListBalance(token?.address),
+    value: _balance,
   });
+
+  const usd = useFormatNumber({ value: _usd });
 
   const header = <TokenPanelHeader isSrc={isSrc} label={label} />;
 
@@ -411,57 +405,59 @@ const TokenPanel = ({
             width: "100%",
           }}
         >
-          <Balance value={balance} />
-          <USD value={usd} />
+          <Balance
+            value={`Balance: ${balance || "0"}`}
+            isLoading={token && !_balance}
+            css={{
+              opacity: !token ? 0 : 1,
+            }}
+          />
+          <USD value={`$ ${usd || "0"}`} isLoading={usdLoading} />
         </FlexRow>
       </StyledTokenPanelContent>
     </StyledTokenPanel>
   );
 };
 
+const USD = styled(LoadingText)`
+  height: 13px;
+  text-align: right;
+`;
+
+const Balance = styled(LoadingText)`
+  height: 13px;
+`;
+
 export interface Props extends ProviderArgs {
   connectWallet?: () => void;
   config?: WidgetConfig;
-  getPriceUsd?: GetPriceUSD;
-  initialFromToken?: string;
-  initialToToken?: string;
+  fromToken?: string;
+  toToken?: string;
 }
 
 export const Widget = (props: Props) => {
   return (
-    <Provider {...props}>
+    <Provider {...props} fromToken={props.fromToken} toToken={props.toToken}>
       <ThemeProvider theme={theme}>
         <WidgetContent
           connectWallet={props.connectWallet}
           styles={props.config?.styles}
           layout={props.config?.layout}
           modal={props.config?.modalStyles}
-          initialFromToken={props.initialFromToken}
-          initialToToken={props.initialToToken}
         />
       </ThemeProvider>
     </Provider>
   );
 };
 
-export const TokenListItem = ({
-  token,
-  disabled,
-}: {
-  token: Token;
-  disabled?: boolean;
-}) => {
-  const _balance = useTokenListBalance(token.address);
-  const _usd = useUsdAmount({
-    address: token.address,
-    amount: _balance,
-  });
+export const TokenListItem = (props: TokenListItemProps) => {
+  // const { usd: _usd } = useUsdAmount(props.token.address, props.balance);
 
-  const balance = useFormatNumber({ value: _balance });
-  const usd = useFormatNumber({ value: _usd });
+  const balance = useFormatNumber({ value: props.balance });
+  // const usd = useFormatNumber({ value: _usd });
 
   return (
-    <StyledListToken $disabled={disabled}>
+    <StyledListToken $disabled={props.selected}>
       <FlexRow
         style={{
           width: "unset",
@@ -472,17 +468,19 @@ export const TokenListItem = ({
       >
         <Logo
           className="logo"
-          src={token.logoUrl}
-          alt={token.symbol}
+          src={props.token.logoUrl}
+          alt={props.token.symbol}
           imgStyle={{
             width: 30,
             height: 30,
           }}
         />
         <FlexColumn style={{ alignItems: "flex-start" }}>
-          <Text className="symbol">{token.symbol}</Text>
-          {token.name && (
-            <StyledTokenName className="name">{token.name}</StyledTokenName>
+          <Text className="symbol">{props.token.symbol}</Text>
+          {props.token.name && (
+            <StyledTokenName className="name">
+              {props.token.name}
+            </StyledTokenName>
           )}
         </FlexColumn>
       </FlexRow>
@@ -492,8 +490,8 @@ export const TokenListItem = ({
           alignItems: "flex-end",
         }}
       >
-        <StyledBalance isLoading={!balance} value={balance} />
-        {usd && <StyledUSD value={`$ ${usd}`} />}
+        <StyledBalance isLoading={!props.balance} value={balance} />
+        {/* {usd && <StyledUSD value={`$ ${usd}`} />} */}
       </FlexColumn>
     </StyledListToken>
   );
@@ -508,10 +506,9 @@ const StyledBalance = styled(LoadingText)`
   font-size: 14px;
 `;
 
-const StyledUSD = styled(LoadingText)`
-  font-size: 12px;
-  opacity: 0.8;
-`;
+// const StyledUSD = styled(LoadingText)`
+//   font-size: 12px;
+// `;
 
 export const StyledListToken = styled.div<{ $disabled?: boolean }>(
   ({ $disabled }) => ({

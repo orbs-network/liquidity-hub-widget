@@ -1,8 +1,5 @@
 export { Widget } from "./Widget";
-export {
-  type WidgetLayout,
-  type WidgetConfig,
-} from "./type";
+export type { WidgetLayout, WidgetConfig, TokenListItemProps } from "./type";
 export {
   useUsdAmount,
   useShowConfirmationButton,
@@ -13,8 +10,8 @@ export {
   useFromTokenPanel,
   useToTokenPanel,
   useRefreshBalancesAfterTx,
-  useInitialTokens,
   useSwapButton,
+  useBalanceUpdatingAfterSwap,
 } from "./hooks";
 
 export * from "./components/TokenList";
@@ -26,5 +23,10 @@ export {
   useSwapConfirmation,
   supportedChainsConfig,
   useSteps,
-  PoweredByOrbs
+  PoweredByOrbs,
+  useOrders,
+  useTransactionEstimateGasPrice,
+  useEstimateGasPrice,
+  zeroAddress,
+  type Order
 } from "@orbs-network/liquidity-hub-ui";

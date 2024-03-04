@@ -25,9 +25,12 @@ function Wrapped() {
       chainId={connectedChainId}
       partner="playground"
       account={address}
-      partnerChainId={supportedChainsConfig.polygon.chainId}
-      initialFromToken="USDC"
-      initialToToken="USDT"
+      supportedChains={[
+        supportedChainsConfig.polygon.chainId,
+        supportedChainsConfig.base.chainId,
+      ]}
+      fromToken="MATIC"
+      toToken="USDC"
       config={{
         modalStyles: {
           containerStyles: {

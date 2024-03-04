@@ -1,13 +1,14 @@
 import { CSSObject } from "styled-components";
 import _ from "lodash";
-import { Token } from "@orbs-network/liquidity-hub-ui";
+import { eqIgnoreCase, Token } from "@orbs-network/liquidity-hub-ui";
 import { FixedSizeList as List } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { CSSProperties, FC } from "react";
-import { eqIgnoreCase } from "@defi.org/web3-candies";
 import { useMainStore } from "lib/store";
 import styled from "styled-components";
 import { useShallow } from "zustand/react/shallow";
+import { useTokenListBalances } from "lib/hooks/useTokenListBalances";
+import { TokenListItemProps } from "lib/type";
 
 export const TokenListItem = (props: {
   index: number;
@@ -15,9 +16,11 @@ export const TokenListItem = (props: {
   data: {
     tokens: Token[];
     onTokenSelect: (token: Token) => void;
-    ListItem: FC<{ token: Token; disabled?: boolean }>;
+    ListItem: FC<TokenListItemProps>;
   };
 }) => {
+  const {data: balances} = useTokenListBalances()
+  
   const { index, style, data } = props;
   const { ListItem, tokens } = data;
 
@@ -42,7 +45,11 @@ export const TokenListItem = (props: {
         onClick={() => data.onTokenSelect(token)}
         $disabled={disabled}
       >
-        <ListItem token={token} disabled={disabled} />
+        <ListItem
+          balance={balances  ? balances[token.address] : undefined}
+          token={token}
+          selected={disabled}
+        />
       </StyledListToken>
     </div>
   );
@@ -59,13 +66,7 @@ export function TokenList({
   itemSize?: number;
   tokens?: Token[];
   style?: CSSObject;
-  ListItem: ({
-    token,
-    disabled,
-  }: {
-    token: Token;
-    disabled?: boolean;
-  }) => JSX.Element;
+  ListItem: (args: TokenListItemProps) => JSX.Element;
 }) {
   return (
     <AutoSizer style={style}>

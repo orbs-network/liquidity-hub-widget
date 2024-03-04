@@ -1,7 +1,6 @@
-import {
-  SkeletonLoader,
-} from "@orbs-network/liquidity-hub-ui";
+
 import styled, { CSSProperties } from "styled-components";
+import { SkeletonLoader } from "./SkeletonLoader";
 import { Text } from "./Text";
 
 interface Props {
@@ -18,10 +17,11 @@ export function LoadingText({ value, className = "", css = {}, isLoading }: Prop
       {isLoading ? (
         <SkeletonLoader
           styles={{
-            width: "30px",
-            height: "10px",
+            width: "100%",
+            height: "100%",
             borderRadius: "5px",
-            opacity: 0.5,
+            minWidth: 50,
+            minHeight: 14,
           }}
         />
       ) : (

@@ -13,7 +13,7 @@ export function Text({
   fontSize?: number;
 }) {
   return (
-    <StyledText $fontSize={fontSize} className={className} style={style}>
+    <StyledText $fontSize={fontSize} className={`lh-text ${className}`} style={style}>
       {children}
     </StyledText>
   );

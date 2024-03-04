@@ -12,7 +12,7 @@ import {
   useSlippage,
   useTransactionEstimateGasPrice,
 } from "@orbs-network/liquidity-hub-ui";
-import { useLiquidityHubData } from "lib/hooks/swap/useLiquidityHubData";
+import { useLiquidityHubData } from "lib/hooks/useLiquidityHubData";
 
 const StyledRowLabel = styled(Text)`
   font-size: 14px;

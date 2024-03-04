@@ -1,10 +1,9 @@
 import axios from "axios";
 import BN from "bignumber.js";
-import { isNativeAddress, erc20abi } from "@defi.org/web3-candies";
 import Web3 from "web3";
 import { ContractCallContext, Multicall } from "ethereum-multicall";
 import _ from "lodash";
-import { amountUi, Token } from "@orbs-network/liquidity-hub-ui";
+import { amountUi, ERC20Abi, isNativeAddress, Token } from "@orbs-network/liquidity-hub-ui";
 import { Balances } from "./type";
 
 export async function fetchPriceParaswap(
@@ -57,13 +56,13 @@ export const getBalances = async (
   }
   const native = tokens.find((it) => isNativeAddress(it.address));
   const erc20Tokens = tokens.filter((it) => !isNativeAddress(it.address));
-
+  
   const contractCallContext: ContractCallContext[] = erc20Tokens.map(
     (token) => {
       return {
         reference: token.address,
         contractAddress: token.address as string,
-        abi: erc20abi as any,
+        abi: ERC20Abi,
         token,
         calls: [
           {
@@ -79,7 +78,7 @@ export const getBalances = async (
   const multicall = new Multicall({ web3Instance: web3, tryAggregate: true });
 
   const [nativeBalance, results] = await Promise.all([
-    web3.eth.getBalance(account),
+    (await web3.eth.getBalance(account)).toString(),
     multicall.call(contractCallContext),
   ]);
 
@@ -90,7 +89,7 @@ export const getBalances = async (
   }
 
   try {
-    _.forEach(results.results, (value) => {
+    _.forEach(results.results, (value: any) => {
       if (!value) return "0";
       const result = value.callsReturnContext[0]?.returnValues[0]?.hex;
       if (!result) return "0";

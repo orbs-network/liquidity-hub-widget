@@ -6,6 +6,7 @@ export const useQueryKeys = () => {
   const account = useAccount();
   const chainId = useChainId();
 
+
   const balances = useMemo(() => {
     return [QUERY_KEYS.BALANCES, account, chainId];
   }, [chainId, account]);

@@ -1,12 +1,13 @@
-import { setWeb3Instance } from "@defi.org/web3-candies";
 import {
   ProviderArgs,
   LiquidityHubProvider,
-  useWeb3,
 } from "@orbs-network/liquidity-hub-ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
+import { MainContextProvider } from "./context";
+import { useInitialTokens } from "./hooks";
 import { useResetOnChainChanged } from "./hooks/useResetOnChainChanged";
+import { MainContextArgs } from "./type";
 
 const client = new QueryClient({
   defaultOptions: {
@@ -16,30 +17,33 @@ const client = new QueryClient({
   },
 });
 
-export interface Props extends ProviderArgs {
-  initialFromToken?: string;
-  initialToToken?: string;
+export interface Props extends ProviderArgs, MainContextArgs {
+  fromToken?: string;
+  toToken?: string;
   children: React.ReactNode;
 }
 
 export const Provider = (args: Props) => {
-
   return (
     <LiquidityHubProvider {...args} slippage={args.slippage || 0.5}>
       <QueryClientProvider client={client}>
-          <Content>{args.children}</Content>
+        <MainContextProvider
+          value={{ getUsdPrice: args.getUsdPrice, getTokens: args.getTokens }}
+        >
+          <Content {...args}>{args.children}</Content>
+        </MainContextProvider>
       </QueryClientProvider>
     </LiquidityHubProvider>
   );
 };
 
-const Content = ({ children }: { children: ReactNode }) => {
+interface ContentProps extends Props {
+  children: ReactNode;
+}
+
+const Content = (props: ContentProps) => {
   useResetOnChainChanged();
-  const web3 = useWeb3();
+  useInitialTokens(props.fromToken, props.toToken);
 
-  useEffect(() => {
-    setWeb3Instance(web3);
-  }, [web3]);
-
-  return <>{children}</>;
+  return <>{props.children}</>;
 };

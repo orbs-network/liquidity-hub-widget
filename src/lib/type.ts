@@ -2,7 +2,6 @@ import { Token } from "@orbs-network/liquidity-hub-ui";
 import { CSSObject } from "styled-components";
 
 export interface TokenPanelProps {
-  usd?: string | number;
   inputValue?: string;
   onInputChange?: (value: string) => void;
   token?: Token;
@@ -20,6 +19,11 @@ export interface ModalStyles {
   containerStyles?: CSSObject;
 }
 
+export type TokenListItemProps = {
+  token: Token;
+  selected?: boolean;
+  balance?: string;
+};
 
 export interface WidgetConfig {
   styles?: CSSObject;
@@ -34,4 +38,10 @@ export interface WidgetLayout {
     inputSide?: "left" | "right";
     usdSide?: "left" | "right";
   };
+}
+
+
+export interface MainContextArgs {
+  getTokens?: (chainId?: number) => Promise<Token[]>;
+  getUsdPrice?: (address: string, chainId: number) => Promise<number>;
 }

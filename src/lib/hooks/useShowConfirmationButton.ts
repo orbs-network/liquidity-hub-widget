@@ -1,15 +1,18 @@
 import BN from "bignumber.js";
-import { isNativeAddress } from "@defi.org/web3-candies";
 import {
+  eqIgnoreCase,
   getChainConfig,
+  isNativeAddress,
+  useChainConfig,
   useIsInvalidChain,
-  usePartnerChainId,
+  useSupportedChains,
   useSwitchNetwork,
 } from "@orbs-network/liquidity-hub-ui";
 import { useTokenListBalance } from "./useTokenListBalance";
 import { useMainStore } from "lib/store";
-import { useLiquidityHubData } from "./swap/useLiquidityHubData";
+import { useLiquidityHubData } from "./useLiquidityHubData";
 import { useCallback, useMemo } from "react";
+import { useUnwrap } from "./useUnwrap";
 
 export const useShowConfirmationButton = (
   fromTokenUsd: string | number,
@@ -23,13 +26,17 @@ export const useShowConfirmationButton = (
   const { quote, confirmSwap, quoteLoading, quoteError } =
     useLiquidityHubData();
   const toAmount = quote?.outAmountUI;
-  const partnerChainId = usePartnerChainId();
+  const supportedChains = useSupportedChains();
   const { mutate: switchNetwork, isPending: switchNetworkLoading } =
     useSwitchNetwork();
   const wrongChain = useIsInvalidChain();
   const fromAmountBN = new BN(fromAmount || "0");
   const fromTokenBalance = useTokenListBalance(fromToken?.address);
   const fromTokenBalanceBN = new BN(fromTokenBalance || "0");
+  const wToken = useChainConfig()?.wToken?.address;
+  const { mutate: unwrap, isLoading: unwrapLoading } = useUnwrap();
+
+  const isLoading = quoteLoading || switchNetworkLoading || unwrapLoading;
 
   const _confirmSwap = useCallback(() => {
     return confirmSwap({
@@ -42,9 +49,10 @@ export const useShowConfirmationButton = (
     if (wrongChain) {
       return {
         disabled: false,
-        text: `Switch to ${getChainConfig(partnerChainId)?.chainName}`,
-        onClick: () => switchNetwork?.(partnerChainId!),
+        text: `Switch to ${getChainConfig(supportedChains[0])?.chainName}`,
+        onClick: () => switchNetwork?.(supportedChains[0]!),
         switchNetworkLoading,
+        isLoading,
       };
     }
 
@@ -62,11 +70,23 @@ export const useShowConfirmationButton = (
       };
     }
 
+    if (
+      eqIgnoreCase(fromToken.address, wToken || "") &&
+      isNativeAddress(toToken.address || "")
+    ) {
+      return {
+        text: "Unwrap",
+        onClick: unwrap,
+        uwrapLoading: unwrapLoading,
+        isLoading,
+      };
+    }
     if (quoteLoading) {
       return {
         disabled: false,
         text: "",
         quoteLoading,
+        isLoading,
       };
     }
 
@@ -83,12 +103,7 @@ export const useShowConfirmationButton = (
         text: "No liquidity",
       };
     }
-    if (isNativeAddress(fromToken.address)) {
-      return {
-        disabled: false,
-        text: "Wrap",
-      };
-    }
+
     return {
       disabled: false,
       text: "Swap",
@@ -104,8 +119,8 @@ export const useShowConfirmationButton = (
     quoteError,
     switchNetwork,
     switchNetworkLoading,
-    partnerChainId,
     _confirmSwap,
     quoteLoading,
+    isLoading,
   ]);
 };
